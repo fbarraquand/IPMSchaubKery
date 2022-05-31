@@ -1,0 +1,87 @@
+\documentclass[12pt,a4paper]{article}
+\title{IMPs Chapitre 3}
+\date{\today}
+\author{Tewann Beauchard}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+\begin{document}
+
+\begin{center}
+\section*{IMPs Chapitre 3}
+\vspace*{1cm}
+Tewann Beauchard \\
+\vspace*{1cm}
+May, 2022
+\end{center}
+\vspace*{1cm}
+
+On s'intéresse, ici, au nouveau livre de M.Schaub et M.Kéry qui porte sur les modèles de population intégrés (IMPs). De par sa parution récente, Décembre 2021, il est important de s'interroger sur le fonctionnement et la réplication de leurs modèles. Pour se faire, nous allons nous concentrer en particulier sur les chapitres 3 ("Introduction to stage-structured population models"), 5 ("Introduction to integrated population models") et finalement sur le chapitre 6 ("Benefits of integrated population modeling"). Ainsi, nous pourrons vérifier la reproductibilité des résultats, nous intéresser à l'estimation de $n_{a}(t)$ et de $n_{j}(t)$ qui correspondent aux tailles de populations juvéniles et adultes à l'instant t. Sachant que la taille de la population totale à l'instant t, soit $n(t)$, peut s'écrire : $$n(t)= n_{a}(t) + n_{j}(t)$$L'objectif étant de savoir si la prise en compte de ces deux paramètres, donc de dissocier la taille de population totale par les tailles en fonction des classes d'âges, apportent un réel bénéfice mettant de côté l'utilisation directe de $n(t)$.
+
+\section{Introduction}
+Si l'on décide de s'intéresser aux modèles de population structurés en classes d'âges, il est primordial de prendre en compte le taux de croissance de la population (noté $\lambda_{t}$). C'est même la principale utilitée de ce type de modèle. De plus, ne pas négliger la densité dépendance, l'ajout de la stochasticité (variabilité) et les erreurs d'observations est tout aussi important pour obtenir une meilleure compréhension de la dynamique de la population étudiée.
+\begin{equation}
+\lambda_{t}=\dfrac{N_{t}}{N_{t-1}}=\dfrac{S_{t}}{N_{t-1}}+\dfrac{R_{t}}{N_{t-1}}+\dfrac{I_{t}}{N_{t-1}}-\dfrac{E_{t}}{N_{t-1}}
+\end{equation}
+Avec $S_{t}$ la survie, $R_{t}$ le recrutement, $I_{t}$ l'immigration et $E_{t}$ l'émigration à l'instant t.
+
+On s'intéresse dès lors aux modèles structurés en classes d'âges et de stades. Pour le pré-breeding sur les classes d'âges, on a :
+\begin{equation}
+\begin{aligned}
+N_{1y, t+1}=N_{1y, t}f_{1, t}s_{j, t}+N_{2y, t}f_{a, t}s_{j, t}+N_{3y, t}f_{a, t}s_{j, t}+N_{4y, t}f_{a, t}s_{j, t} \\
+N_{2y, t+1}=N_{1y, t}s_{a, t} \\
+N_{3y, t+1}=N_{2y, t}s_{a, t} \\
+N_{4y, t+1}=N_{3y, t}s_{a, t}
+\end{aligned}
+\end{equation}
+En ce qui concerne les stades :
+\begin{equation}
+\begin{aligned}
+N_{1y, t+1}=N_{1y, t}f_{1, t}s_{j, t}+N_{ad, t}f_{a, t}s_{j, t} \\
+N_{ad, t+1}=N_{1y, t}s_{a, t}+N_{ad, t}s_{a, t}
+\end{aligned}
+\end{equation}
+Pour le post-breeding sur les classes d'âges :
+\begin{equation}
+\begin{aligned}
+N_{juv, t+1}=N_{juv, t}f_{1, t}s_{j, t}+N_{1y, t}f_{a, t}s_{a, t}+N_{2y, t}f_{a, t}s_{a, t}+N_{3y, t}f_{a, t}s_{a, t} \\
+N_{1y, t+1}=N_{juv, t}s_{a, t} \\
+N_{2y, t+1}=N_{2y, t}s_{a, t} \\
+N_{3y, t+1}=N_{3y, t}s_{a, t}
+\end{aligned}
+\end{equation}
+En ce qui concerne les stades :
+\begin{equation}
+\begin{aligned}
+N_{juv, t+1}=N_{juv, t}f_{1, t}s_{j, t}+N_{ad, t}f_{a, t+1}s_{j, t} \\
+N_{ad, t+1}=N_{juv, t}s_{a, t}+N_{ad, t}s_{a, t}
+\end{aligned}
+\end{equation}
+
+Le taux de reproduction net, correspond au nombre de juvénile par lequel un nouveau né peut être remplacé s'il meurt. Là où le taux de croissance $\lambda$ est basé sur la croissance de la population par intervalle de projection, $R_0$, lui, s'exprime en fonction la croissance de la population par génération.
+\begin{equation}
+R_{0}=\sum_{i=1}^{\infty}l_{i}f_{i}
+\end{equation}
+Où $l_i$ est la probabilité de survie de la naissance au stade \textit{i} et $f_i$ est la productivité à la classe du stade \textit{i}.
+Il en découle le \textit{generation time} (GT) correspondant à : 
+\begin{equation}
+GT=\dfrac{log(R_0)}{log(\lambda)}
+\end{equation}
+
+Nous pouvons ajouter à cela le calcul de la sensibilité (notée $S(a_{i, j})$) et de l'élasticité (notée $E(a_{i, j})$) et permettent de faire des analyses de perturbation en affichage décimal ou en pourcentage respectivement :
+\begin{equation}
+S(a_{i, j})=
+\end{equation}
+\begin{equation}
+E(a_{i, j})=
+\end{equation}
+
+
+
+
+\end{document}
