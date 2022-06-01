@@ -75,12 +75,21 @@ GT=\dfrac{log(R_0)}{log(\lambda)}
 
 Nous pouvons ajouter à cela le calcul de la sensibilité (notée $S(a_{i, j})$) et de l'élasticité (notée $E(a_{i, j})$) et permettent de faire des analyses de perturbation en affichage décimal ou en pourcentage respectivement :
 \begin{equation}
-S(a_{i, j})=
+S(a_{i, j})=\dfrac{\partial\lambda}{\partial a_{i, j}}
 \end{equation}
 \begin{equation}
-E(a_{i, j})=
+E(a_{i, j})=\dfrac{\partial\lambda}{\partial a_{i, j}} \dfrac{a_{i, j}}{\lambda}
 \end{equation}
 
+Dans le cas d'un modèle à deux classes d'âges, le taux de croissance est calculé de la manière suivante : 
+\begin{equation}
+\lambda_{t}=\dfrac{N_{1, t+1}+N_{2, t+1}}{N_{1, t}+N_{2, t}}
+\end{equation}
+Soit à l'échelle logarithmique :
+\begin{equation}
+r_{s}=\dfrac{1}{T-u}\sum_{t=u}^{T}r_t
+\end{equation}
+Où $r_s$ est équivalent à $log(\lambda_s)$.\\La moyenne post-burn-in du taux annuel de croissance est une estimation du taux stochastique de croissance de la population.  
 
 
 
