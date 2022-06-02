@@ -24,6 +24,11 @@ May, 2022
 On s'intéresse, ici, au nouveau livre de M.Schaub et M.Kéry qui porte sur les modèles de population intégrés (IMPs). De par sa parution récente, Décembre 2021, il est important de s'interroger sur le fonctionnement et la réplication de leurs modèles. Pour se faire, nous allons nous concentrer en particulier sur les chapitres 3 ("Introduction to stage-structured population models"), 5 ("Introduction to integrated population models") et finalement sur le chapitre 6 ("Benefits of integrated population modeling"). Ainsi, nous pourrons vérifier la reproductibilité des résultats, nous intéresser à l'estimation de $n_{a}(t)$ et de $n_{j}(t)$ qui correspondent aux tailles de populations juvéniles et adultes à l'instant t. Sachant que la taille de la population totale à l'instant t, soit $n(t)$, peut s'écrire : $$n(t)= n_{a}(t) + n_{j}(t)$$L'objectif étant de savoir si la prise en compte de ces deux paramètres, donc de dissocier la taille de population totale par les tailles en fonction des classes d'âges, apportent un réel bénéfice mettant de côté l'utilisation directe de $n(t)$.
 
 \section{Introduction}
+En partant du postulat que la taille d'une population à l'instant t est régie par la survie des individus, le recrutement (équivalent quantifiable : le nombre de naissance), l'immigration et l'émigration (tout cela à l'instant t), on se retrouve dans la situation suivante : 
+\begin{equation}
+N_{t}=S_{t}+R_{t}+I_{t}-E_{t}
+\end{equation}
+
 Si l'on décide de s'intéresser aux modèles de population structurés en classes d'âges, il est primordial de prendre en compte le taux de croissance de la population (noté $\lambda_{t}$). C'est même la principale utilitée de ce type de modèle. De plus, ne pas négliger la densité dépendance, l'ajout de la stochasticité (variabilité) et les erreurs d'observations est tout aussi important pour obtenir une meilleure compréhension de la dynamique de la population étudiée.
 \begin{equation}
 \lambda_{t}=\dfrac{N_{t}}{N_{t-1}}=\dfrac{S_{t}}{N_{t-1}}+\dfrac{R_{t}}{N_{t-1}}+\dfrac{I_{t}}{N_{t-1}}-\dfrac{E_{t}}{N_{t-1}}
@@ -39,6 +44,7 @@ N_{3y, t+1}=N_{2y, t}s_{a, t} \\
 N_{4y, t+1}=N_{3y, t}s_{a, t}
 \end{aligned}
 \end{equation}
+Sachant que $s_{j,t}$ désigne la survie des juvéniles de t à t+1 ; $s_{a, t}$ la survie des adultes de t à t+1 ; $f_{1, t}$ la productivité des femelles âgées d'une année à l'instant t ; $f_{a, t}$ la productivité des femelles plus âgées ("adultes") à l'instant t.\vspace*{0.5cm}\\
 En ce qui concerne les stades :
 \begin{equation}
 \begin{aligned}
@@ -90,7 +96,17 @@ Soit à l'échelle logarithmique :
 r_{s}=\dfrac{1}{T-u}\sum_{t=u}^{T}r_t
 \end{equation}
 Où $r_s$ est équivalent à $log(\lambda_s)$.\\La moyenne post-burn-in du taux annuel de croissance est une estimation du taux stochastique de croissance de la population.  
-
-
-
+\\
+Maintenant, si nous portons notre intérêt sur l'analyse du modèle de matrice de population sans la stochasticité et l'incertitude des paramètres, il faut reformuler les équations du modèle structuré en classes d'âges :
+\begin{equation}
+N_{1, t+1}=N_{1, t}f_{1, t}s_{j, t}+N_{2, t}f_{a, t}s_{j, t}
+\end{equation}
+Ce qui nous amène à 
+\begin{equation}
+N_{2, t+1}=N_{1, t}s_{a, t}+N_{2, t}s_{a, t}=(N_{1, t}+N_{2, t})s_{a, t}
+\end{equation}
+Ainsi, le taux de croissance s'exprime de la manière suivante :
+\begin{equation}
+\lambda=\dfrac{N_{1, T+1}+N_{2, T+1}}{N_{1, T}+N_{2, T}}=\dfrac{N_{1, T+1}}{N_{1, T}}=\dfrac{N_{2, T+1}}{N_{2, T}}
+\end{equation}
 \end{document}
