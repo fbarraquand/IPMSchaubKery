@@ -1,0 +1,41 @@
+\documentclass[12pt,a4paper]{article}
+\title{IMPs Chapitre 3}
+\date{\today}
+\author{Tewann Beauchard}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+\begin{document}
+
+\begin{center}
+\section*{Questions et Remarques}
+\vspace*{1cm}
+Tewann Beauchard \\
+\vspace*{1cm}
+May, 2022
+\end{center}
+\vspace*{1cm}
+
+
+
+\section{INTRODUCTION AUX MODÈLES DE POPULATION STRUCTURÉES EN CLASSES D'ÂGES}
+PARTIE ÉCRITE SUR FEUILLE
+
+\section{INTRODUCTION AUX MODÈLES DE POPULATION INTÉGRÉS}
+IPMs :\\ - Données démographiques analysées et taux démographiques estimées\\
+- Modèle matriciel de population qui sert de noyau avec lequel on va calculer nos tailles de population etc...\\
+(Partie 5.1 et 5.2.2) Nous sommes dans une analyse jointe et non intégrante.\\
+(Partie 5.3) Le "process model" remplace le modèle matriciel de population. Les données de comptage de population sont représentées par une simple gaussienne (d'où l'application d'une loi Normale sur les paramètres d'intérêt). Le "fixed stage-specific" est remplacé par les priors (puisque nous avons une bonne connaissance de l’estimation de ces quantités).\\
+
+Tous les résumés d'histoires de vies qui peuvent être calculés par le biais d'un modèle matriciel de population (Caswell, 2001) peuvent être obtenus par un IPM sous forme de quantités dérivées, et cela avec une estimation de l'incertitude ("automatique") en même temps que leurs valeurs.\\
+-DU = Discrete Uniform (pour les priors).\\
+En écrivant le modèle en langage JAGS, il est facile d'intégrer la vraisemblance jointe entre différents modèles s'ils impliquent des paramètres avec les mêmes appellations. (Partie 5.4) On assume aussi l'indépendance des données pour pouvoir avoir une vraisemblance jointe (certains exemples modèrent cette hypothèse). De plus, la stochasticité environnementale revient à laisser les paramètres démographiques varier au cours du temps.\\
+"L'observation error" dans le modèle espace d'état est l'équivalent de l'erreur résiduelle du IPM. Elle mesure l'ampleur de la divergence entre les données de comptage de la population et les tailles de population que l'on s'attend à retrouver sous le modèle de population choisi.\\
+(page 231) Si l'on cherche à inclure une émigration permanente, il suffit de soustraire au taux de survie l'équivalent du taux d'émigration.
+
+\end{document}
