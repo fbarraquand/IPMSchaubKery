@@ -38,4 +38,12 @@ En écrivant le modèle en langage JAGS, il est facile d'intégrer la vraisembla
 "L'observation error" dans le modèle espace d'état est l'équivalent de l'erreur résiduelle du IPM. Elle mesure l'ampleur de la divergence entre les données de comptage de la population et les tailles de population que l'on s'attend à retrouver sous le modèle de population choisi.\\
 (page 231) Si l'on cherche à inclure une émigration permanente, il suffit de soustraire au taux de survie l'équivalent du taux d'émigration.
 
+\section{Les bénéfices de la modélisation intégrée de population}
+On associe : \\
+- Données de capture-recapture à la survie\\
+- Données de comptage de la population à $\lambda$\\
+- Données de productivité à f\\
+Cependant, dans un IPM il y a des flux d'informations. Par exemple, de la donnée venant du comptage de la population peut contribuer à définir (plus précisément) la survie des individus.\\
+Si l'on décide d'estimer un paramètre (ex : la productivité) sans avoir la donnée directement, cela se traduit en codage par l'enlèvement du modèle associé (ici : régression de Poisson) mais sans retirer le prior pour permettre l'estimation du paramètre.
+
 \end{document}
