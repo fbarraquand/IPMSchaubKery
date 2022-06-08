@@ -1,0 +1,1899 @@
+---
+title: "IPMs_Chapitre_6_modified_code"
+author: "Tewann Beauchard"
+date: "08/06/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+# 6.2 Parameter estimates with increased precision
+# ================================================
+
+# 6.2.1 Experiencing the gain in precision in a simple simulation
+# ---------------------------------------------------------------
+
+# ~~~~ Code for the simulations ~~~~
+
+library(IPMbook); library(jagsUI)
+
+# 1. Write JAGS code for the analyzing models
+# 1.1. IPM
+cat(file="model6.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time: our model of population dynamics
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau)
+  }
+
+  # Productivity data (Poisson regression model)
+  sJ ~ dpois(nJ * mean.f)
+
+  # Capture-recapture data (CJS model with multinomial likelihood)
+  # Define the multinomial likelihood
+  for (t in 1:(n.occasions-1)){
+    marr.j[t,1:n.occasions] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occasions] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occasions-1)){
+    # Main diagonal
+    q[t] <- 1 - p[t]   # Probability of non-recapture
+    pr.j[t,t] <- sj[t] * p[t]
+    pr.a[t,t] <- sa[t] * p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occasions-1)){
+      pr.j[t,j] <- sj[t] * prod(sa[(t+1):j]) * prod(q[t:(j-1)]) * p[j]
+      pr.a[t,j] <- prod(sa[t:j]) * prod(q[t:(j-1)]) * p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occasions-1)){
+    pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
+    pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
+  }
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+
+# 1.2. CJS model
+cat(file="model7.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+
+  for (t in 1:(n.occCJS-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  # Define the multinomial likelihood
+  for (t in 1:(n.occCJS-1)){
+    marr.j[t,1:n.occCJS] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occCJS] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occCJS-1)){
+    # Main diagonal
+    q[t] <- 1 - p[t]   # Probability of non-recapture
+    pr.j[t,t] <- sj[t] * p[t]
+    pr.a[t,t] <- sa[t] * p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occCJS-1)){
+      pr.j[t,j] <- sj[t] * prod(sa[(t+1):j]) * prod(q[t:(j-1)]) * p[j]
+      pr.a[t,j] <- prod(sa[t:j]) * prod(q[t:(j-1)]) * p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occCJS-1)){
+    pr.j[t,n.occCJS] <- 1-sum(pr.j[t,1:(n.occCJS-1)])
+    pr.a[t,n.occCJS] <- 1-sum(pr.a[t,1:(n.occCJS-1)])
+  }
+}
+")
+
+
+# 1.3. Poisson regression model
+cat(file="model8.txt", "
+model {
+  # Priors and linear models
+  mean.f ~ dunif(0, 10)
+
+  # Likelihood
+  sJ ~ dpois(nJ * mean.f)
+}
+")
+
+
+# 1.4. State-space model
+cat(file="model9.txt", "
+model {
+  # Priors and linear models
+  lambda ~ dunif(0, 5)
+
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Model for the initial population size: uniform priors
+  N[1] ~ dunif(1, 600)
+
+  # Process model over time: our model of population dynamics
+  for (t in 1:(n.occPop-1)){
+    N[t+1] <- lambda * N[t]
+  }
+
+  # Observation model
+  for (t in 1:n.occPop){
+    C[t] ~ dnorm(N[t], tau)
+  }
+}
+")
+
+
+# 2. Definition of simulation parameters
+# 2.1. Number of simulations
+# nsim <- 1000    # ca 2.2 hours
+nsim <- 5    # ~~~ for testing
+
+# 2.2. Age specific survival probabilities (juv, adult)
+phi <- c(0.3, 0.55)
+
+# 2.3. Fecundity rate (females)
+f <- 3.1
+
+# 2.4. Initial population size per age class
+Ni <- c(50, 50)
+
+# 2.5. Number of years
+T <- 10
+
+# 2.6. Observation error for the population survey
+sigma <- 10
+
+# 2.7. Capture and recapture probabilities
+cap <- c(0.4, 0.4)          # Capture prob. of nestlings and adults
+recap <- 0.6                # Recapture probability
+
+# 2.8. Probability to find a brood whose reproductive output is recorded
+pprod <- 0.5
+
+# 2.9. Define matrices to store the result
+res1 <- array(NA, dim=c(45, 11, nsim))
+res2 <- array(NA, dim=c(4, 11, nsim))
+res3 <- array(NA, dim=c(2, 11, nsim))
+res4 <- array(NA, dim=c(13, 11, nsim))
+ss <- matrix(NA, nrow=nsim, ncol=4)       # For sample size
+
+# 2.10. Settings for JAGS
+# 2.10.1. Initial values
+inits.ipm <- function(){list(mean.sj=runif(1, 0, 0.5))}
+inits.cjs <- function(){list(mean.sj=runif(1, 0, 0.5))}
+inits.pois <- function(){list(mean.f=runif(1, 1, 5))}
+inits.ssm <- function(){list(sigma=runif(1, 2, 5))}
+
+# 2.10.2. Parameters monitored
+parameters.ipm <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "N", "sigma",
+                    "ann.growth.rate", "Ntot")
+parameters.cjs <- c("mean.sj", "mean.sa", "mean.p")
+parameters.pois <- c("mean.f")
+parameters.ssm <- c("lambda", "N", "sigma")
+
+# 2.10.3. MCMC settings
+ni <- 20000; nb <- 10000; nc <- 3; nt <- 1; na <- 1000
+
+
+# 3. Simulations
+system.time(
+  for (s in 1:nsim){
+    set.seed(s)
+    # 3.1. Create 3 populations (independent)
+    ind1 <- simPop(Ni=Ni, phi=phi, f=f, nYears=T)
+    ind2 <- simPop(Ni=Ni, phi=phi, f=f, nYears=T)
+    ind3 <- simPop(Ni=Ni, phi=phi, f=f, nYears=T)
+    
+    # 3.2. Create the population survey data
+    count <- simCountNorm(N=ind1$totB, sigma=sigma)$count
+    
+    # 3.3. Create the capture histories and the corresponding m-arrays
+    ch <- simCapHist(state=ind2$state, cap=cap, recap=recap, maxAge=2)
+    marr <- marrayAge(ch$ch, ch$age)
+    
+    # 3.4. Create productivity data
+    P <- simProd(reprod=ind3$reprod, pInclude=pprod)
+    
+    # Aggregate productivity data to make the model run faster
+    sJ <- colSums(P$prod.agg)[1]
+    nJ <- colSums(P$prod.agg)[2]
+    
+    # 3.5. Monitor sample size
+    ss[s,1] <- mean(ind1$totA)         # Mean population size
+    ss[s,2] <- table(ch$age)[1]        # Number of marked juveniles
+    ss[s,3] <- table(ch$age)[2]        # Number of marked adults
+    ss[s,4] <- nJ                      # Number of broods recorded
+    
+    # 3.6. Bundle data (4 sets)
+    jags.data.ipm <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
+                          rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C=count)
+    jags.data.cjs <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occCJS=T,
+                          rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]))
+    jags.data.pois <- list(sJ=sJ, nJ=nJ)
+    jags.data.ssm <- list(n.occPop=T, C=count)
+    
+    # 3.7. Call JAGS from R (jagsUI) to run the 4 models
+    m1 <- try(jags(jags.data.ipm, inits.ipm, parameters.ipm, "model6.txt",
+                   n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE))
+    if(!inherits(m1, "try-error"))
+      res1[,,s] <- m1$summary
+    
+    m2 <- try(jags(jags.data.cjs, inits.cjs, parameters.cjs, "model7.txt",
+                   n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE))
+    if(!inherits(m2, "try-error"))
+      res2[,,s] <- m2$summary
+    
+    m3 <- try(jags(jags.data.pois, inits.pois, parameters.pois, "model8.txt",
+                   n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE))
+    if(!inherits(m3, "try-error"))
+      res3[,,s] <- m3$summary
+    
+    m4 <- try(jags(jags.data.ssm, inits.ssm, parameters.ssm, "model9.txt",
+                   n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE))
+    if(!inherits(m4, "try-error"))
+      res4[,,s] <- m4$summary
+    
+    print(s)
+  } ) #s
+
+# 4. Save simulation results
+save(res1, res2, res3, res4, phi, f, sigma, recap, ss, file="Data Fig 6.1.Rdata")
+
+# 5. Produce figure 6.1
+op <- par(cex=1.5)
+boxplot(cbind(res1[1,2,]/res1[1,1,]*100, res2[1,2,]/res2[1,1,]*100,
+              res1[2,2,]/res1[2,1,]*100, res2[2,2,]/res2[2,1,]*100, res1[4,2,]/res1[4,1,]*100,
+              res3[1,2,]/res3[1,1,]*100, res1[34,2,]/res1[34,1,]*100, res4[1,2,]/res4[1,1,]*100),
+        ylab="Coefficient of variation", ylim=c(0, 12), outline=FALSE,
+        col=rep(c("red", "dodgerblue"), 4), border="black", axes=FALSE, boxwex=0.75, at=1:8)
+axis(2, las=1)
+axis(1, at = c(1.5, 3.5, 5.5, 7.5),
+     labels = c(expression(italic('s')[italic(j)]),
+                expression(italic('s')[italic(a)]), expression(italic('f')),
+                expression(lambda)), tcl = -0.5, lwd = 1.5)
+legend("topright", pch=rep(15,2), col=c("red", "dodgerblue"),
+       legend=c("IPM", "Single data set"), bty="n")
+par(op)
+```
+
+
+
+```{r}
+library(IPMbook) ; library(jagsUI)
+
+# 6.2 Parameter estimates with increased precision
+# ================================================
+
+# 6.2.2 Where does the information come from?
+# -------------------------------------------
+
+# ~~~~ Code for the simulations: flow of information ~~~~
+
+# 1. Analyzing models
+# 1.1. Baseline IPM
+cat(file="model10.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time: our model of population dynamics
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau)
+  }
+
+  # Productivity data (Poisson regression model)
+  sJ ~ dpois(nJ * mean.f)
+
+  # Capture-recapture data (CJS model with multinomial likelihood)
+  # Define the multinomial likelihood
+  for (t in 1:(n.occasions-1)){
+    marr.j[t,1:n.occasions] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occasions] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occasions-1)){
+    # Main diagonal
+    q[t] <- 1 - p[t]   # Probability of non-recapture
+    pr.j[t,t] <- sj[t] * p[t]
+    pr.a[t,t] <- sa[t] * p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occasions-1)){
+      pr.j[t,j] <- sj[t] * prod(sa[(t+1):j]) * prod(q[t:(j-1)]) * p[j]
+      pr.a[t,j] <- prod(sa[t:j]) * prod(q[t:(j-1)]) * p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occasions-1)){
+    pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
+    pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
+  }
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+
+
+# 1.2. IPM with more CMR data
+cat(file="model11.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time: our model of population dynamics
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau)
+  }
+
+  # Productivity data (Poisson regression model)
+  sJ ~ dpois(nJ * mean.f)
+
+  # Capture-recapture data (CJS model with multinomial likelihood)
+  for (k in 1:ex){
+    # Define the multinomial likelihood
+    for (t in 1:(n.occasions-1)){
+      marr.j[t,1:n.occasions,k] ~ dmulti(pr.j[t,,k], rel.j[t,k])
+      marr.a[t,1:n.occasions,k] ~ dmulti(pr.a[t,,k], rel.a[t,k])
+    } #t
+    # Define the cell probabilities of the m-arrays
+    for (t in 1:(n.occasions-1)){
+      # Main diagonal
+      q[t,k] <- 1 - p[t]   # Probability of non-recapture
+      pr.j[t,t,k] <- sj[t] * p[t]
+      pr.a[t,t,k] <- sa[t] * p[t]
+      # Above main diagonal
+      for (j in (t+1):(n.occasions-1)){
+         pr.j[t,j,k] <- sj[t] * prod(sa[(t+1):j]) * prod(q[t:(j-1),k]) * p[j]
+         pr.a[t,j,k] <- prod(sa[t:j]) * prod(q[t:(j-1),k]) * p[j]
+       } #j
+       # Below main diagonal
+       for (j in 1:(t-1)){
+         pr.j[t,j,k] <- 0
+         pr.a[t,j,k] <- 0
+       } #j
+     } #t
+     # Last column: probability of non-recapture
+     for (t in 1:(n.occasions-1)){
+       pr.j[t,n.occasions,k] <- 1-sum(pr.j[t,1:(n.occasions-1),k])
+       pr.a[t,n.occasions,k] <- 1-sum(pr.a[t,1:(n.occasions-1),k])
+    } #t
+  } #k
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+
+# 1.3. IPM with multiple productivity data
+cat(file="model12.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time: our model of population dynamics
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau)
+  }
+
+  # Productivity data (Poisson regression model)
+  for (k in 1:ex){
+    sJ[k] ~ dpois(nJ[k] * mean.f)
+  }
+
+  # Capture-recapture date (CJS model with multinomial likelihood)
+  # Define the multinomial likelihood
+  for (t in 1:(n.occasions-1)){
+    marr.j[t,1:n.occasions] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occasions] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occasions-1)){
+    # Main diagonal
+    q[t] <- 1 - p[t]   # Probability of non-recapture
+    pr.j[t,t] <- sj[t] * p[t]
+    pr.a[t,t] <- sa[t] * p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occasions-1)){
+      pr.j[t,j] <- sj[t] * prod(sa[(t+1):j]) * prod(q[t:(j-1)]) * p[j]
+      pr.a[t,j] <- prod(sa[t:j]) * prod(q[t:(j-1)]) * p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occasions-1)){
+    pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
+    pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
+  }
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+
+# 1.4. IPM with more count data
+cat(file="model13.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time: our model of population dynamics
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (k in 1:ex){
+    for (t in 1:n.occasions){
+      C[k,t] ~ dnorm(N[1,t] + N[2,t], tau)
+    } #t
+  } #k
+
+  # Productivity data (Poisson regression model)
+  sJ ~ dpois(nJ * mean.f)
+
+  # Capture-recapture data (CJS model with multinomial likelihood)
+  # Define the multinomial likelihood
+  for (t in 1:(n.occasions-1)){
+    marr.j[t,1:n.occasions] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occasions] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occasions-1)){
+    # Main diagonal
+    q[t] <- 1 - p[t]   # Probability of non-recapture
+    pr.j[t,t] <- sj[t] * p[t]
+    pr.a[t,t] <- sa[t] * p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occasions-1)){
+      pr.j[t,j] <- sj[t] * prod(sa[(t+1):j]) * prod(q[t:(j-1)]) * p[j]
+      pr.a[t,j] <- prod(sa[t:j]) * prod(q[t:(j-1)]) * p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occasions-1)){
+    pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
+    pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
+  }
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+
+# 2. Simulation parameters
+
+# 2.1. Age specific survival probabilities (juv, adult)
+phi <- c(0.3, 0.55)
+
+# 2.2. Fecundity rate (females)
+f <- 3.1
+
+# 2.3. Initial population size per age class
+Ni <- c(50, 50)
+
+# 2.4. Number of years
+T <- 10
+
+# 2. 5. Observation error for the population survey
+sigma <- 10
+
+# 2.6. Capture and recapture probabilities
+cap <- c(0.4, 0.4)          # Capture prob. of nestlings and adults
+recap <- 0.6                # Recapture probability
+
+# 2.7. Probability to find a brood whose reproductive output is recorded
+pprod <- 0.5
+
+# 2.8. Number of times data sets are replicated
+ex <- 10
+
+# 2.9. Number of simulations
+# nsim <- 1300    # ca. 12.5 hours
+nsim <- 4    # ~~~ testing
+
+# 2.10. Define matrices to store the result
+res1 <- res2 <- res3 <- res4 <- array(NA, dim=c(45, 11, nsim))
+
+# 2.11. Settings for JAGS
+# 2.11.1. Initial values
+inits <- function(){list(mean.sj=runif(1, 0, 0.5))}
+
+# 2.11.2. Parameters monitored
+parameters <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "N", "sigma",
+                "ann.growth.rate", "Ntot")
+
+# 2.11.3. MCMC settings
+ni <- 20000; nb <- 10000; nc <- 3; nt <- 1; na <- 2000
+
+
+# 3. Start simulations
+system.time(
+  for (s in 1:nsim){
+    set.seed(s)
+    # 3.1. Create 3 populations (to ensure independence)
+    ind1 <- simPop(Ni=Ni, phi=phi, f=f, nYears=T)
+    ind2 <- simPop(Ni=Ni, phi=phi, f=f, nYears=T)
+    ind3 <- simPop(Ni=Ni, phi=phi, f=f, nYears=T)
+    
+    # 3.2. Create the population survey data
+    count <- simCountNorm(N=ind1$totB, sigma=sigma)$count
+    
+    # 3.3. Create the capture histories and the corresponding m-arrays
+    ch <- simCapHist(state=ind2$state, cap=cap, recap=recap, maxAge=2)
+    marr <- marrayAge(ch$ch, ch$age)
+    
+    # 3.4. Create productivity data
+    P <- simProd(reprod=ind3$reprod, pInclude=pprod)
+    
+    # Aggregate productivity data to make the model run faster
+    sJ <- colSums(P$prod.agg)[1]
+    nJ <- colSums(P$prod.agg)[2]
+    
+    # 3.5. Bundle data
+    # 3.5.1. Baseline: no replication
+    jags.data.1 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
+                        rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C=count)
+    
+    # 3.5.2. ex times more CMR data
+    marr.j <- marr.a <- array(NA, dim=c(dim(marr)[1:2], ex))
+    for (i in 1:ex){
+      marr.j[,,i] <- marr[,,1]
+      marr.a[,,i] <- marr[,,2]
+    } #i
+    jags.data.2 <- list(marr.j=marr.j, marr.a=marr.a, n.occasions=T,
+                        rel.j=apply(marr.j, c(1,3), sum), rel.a=apply(marr.a, c(1,3), sum),
+                        sJ=sJ, nJ=nJ, C=count, ex=ex)
+    
+    # 3.5.3. ex times more productivity data
+    jags.data.3 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
+                        rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=rep(as.numeric(sJ), ex),
+                        nJ=rep(as.numeric(nJ), ex), C=count, ex=ex)
+    
+    # 3.5.4. ex times more count data
+    C <- matrix(NA, nrow=ex, ncol=length(count))
+    for (i in 1:ex){
+      C[i,] <- count
+    } #i
+    jags.data.4 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
+                        rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C=C, ex=ex)
+    
+    
+    # 4. Run models in JAGS from R (jagsUI)
+    # 4.1. Baseline
+    m1 <- try(jags(jags.data.1, inits, parameters, "model10.txt",
+                   n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE))
+    if(!inherits(m1, "try-error"))
+      res1[,,s] <- m1$summary
+    
+    # 4.2. More CMR data
+    m2 <- try(jags(jags.data.2, inits, parameters, "model11.txt",
+                   n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE))
+    if(!inherits(m2, "try-error"))
+      res2[,,s] <- m2$summary
+    
+    # 4.3. More productivity data
+    m3 <- try(jags(jags.data.3, inits, parameters, "model12.txt",
+                   n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE))
+    if(!inherits(m3, "try-error"))
+      res3[,,s] <- m3$summary
+    
+    # 4.4. More count data
+    m4 <- try(jags(jags.data.4, inits, parameters, "model13.txt",
+                   n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE))
+    if(!inherits(m4, "try-error"))
+      res4[,,s] <- m4$summary
+    print(s)
+  } )#s
+
+# 5. Save simulation results
+save(res1, res2, res3, res4, phi, f, sigma, recap, ex, file="Data Fig 6.2.Rdata")
+
+# 6. Produce Fig. 6.2
+# Function to ensure that only converged estimates are included
+r.incl <- function(res, param, r.crit=1.1){
+  h <- which(res[param, 8, ] < r.crit)
+  return(h)
+}
+co <- c("red", rep("dodgerblue", 3))
+# op <- par(mfrow=c(2,2), cex=1.1, mar=c(3.5, 4, 1.5, 1))
+op <- par(mfrow=c(2,2), mar=c(3.5, 4, 1.5, 1))
+u <- which(as.numeric(table(c(r.incl(res1, 1), r.incl(res2, 1), r.incl(res3, 1),
+                              r.incl(res4, 1)))) == 4)[1:1000]
+lab <- expression('CV ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,2,u] / res1[1,1,u] * 100, res2[1,2,u] / res2[1,1,u] * 100,
+              res3[1,2,u] / res3[1,1,u] * 100, res4[1,2,u] / res4[1,1,u] * 100),
+        ylab=lab, axes=FALSE, outline=FALSE, col=co)
+axis(2, las=1)
+axis(1, at=1:4, labels=NA)
+mtext("Juvenile survival", at=2.5, line=0.5, adj=0.5, font=2)
+
+u <- which(as.numeric(table(c(r.incl(res1, 2), r.incl(res2, 2), r.incl(res3, 2),
+                              r.incl(res4, 2)))) == 4)[1:1000]
+lab <- expression('CV ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,2,u] / res1[2,1,u] * 100, res2[2,2,u] / res2[2,1,u] * 100,
+              res3[2,2,u] / res3[2,1,u] * 100, res4[2,2,u] / res4[2,1,u] * 100), ylab=lab,
+        axes=FALSE, outline=FALSE, col=co)
+axis(2, las=1)
+axis(1, at=1:4, labels=NA)
+mtext("Adult survival", at=2.5, line=0.5, adj=0.5, font=2)
+
+u <- which(as.numeric(table(c(r.incl(res1, 4), r.incl(res2, 4), r.incl(res3, 4),
+                              r.incl(res4, 4)))) == 4)[1:1000]
+lab <- expression('CV ('*italic('f')*')')
+boxplot(cbind(res1[4,2,u] / res1[4,1,u] * 100, res2[4,2,u] / res2[4,1,u] * 100,
+              res3[4,2,u] / res3[4,1,u] * 100, res4[4,2,u] / res4[4,1,u] * 100), ylab=lab,
+        axes=FALSE, outline=FALSE, col=co)
+axis(2, las=1)
+axis(1, at=1:4, labels=c("original", "10x CR", "10x Prod", "10x Count"))
+mtext("Productivity", at=2.5, line=0.5, adj=0.5, font=2)
+
+u <- which(as.numeric(table(c(r.incl(res1, 26), r.incl(res2, 26), r.incl(res3, 26),
+                              r.incl(res4, 26)))) == 4)[1:1000]
+lab <- expression('CV ('*lambda*')')
+boxplot(cbind(res1[26,2,u] / res1[26,1,u] * 100, res2[26,2,u] / res2[26,1,u] * 100,
+              res3[26,2,u] / res3[26,1,u] * 100, res4[26,2,u] / res4[26,1,u] * 100), ylab=lab,
+        axes=FALSE, outline=FALSE, col=co)
+axis(2, las=1)
+axis(1, at=1:4, labels=c("original", "10x CR", "10x Prod", "10x Count"))
+mtext("Population growth rate", at=2.5, line=0.5, adj=0.5, font=2)
+par(op)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+```
+```{r}
+
+library(IPMbook) ; library(jagsUI)
+
+# 6.3 Estimation of demographic parameters for which there is no explicit data
+# ============================================================================
+
+# Write JAGS model file
+cat(file="model1.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time: our model of population dynamics
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f / 2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau)
+  }
+
+  # Capture-recapture data (CJS model with multinomial likelihood)
+  # Define the multinomial likelihood
+  for (t in 1:(n.occasions-1)){
+    marr.j[t,1:n.occasions] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occasions] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occasions-1)){
+    # Main diagonal
+    q[t] <- 1 - p[t]                    # Probability of non-recapture
+    pr.j[t,t] <- sj[t] * p[t]
+    pr.a[t,t] <- sa[t] * p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occasions-1)){
+      pr.j[t,j] <- sj[t] * prod(sa[(t+1):j]) * prod(q[t:(j-1)]) * p[j]
+      pr.a[t,j] <- prod(sa[t:j]) * prod(q[t:(j-1)]) * p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occasions-1)){
+    pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
+    pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
+  }
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+library(IPMbook); library(jagsUI)
+data(woodchat6)
+str(woodchat6)
+
+marr <- marrayAge(woodchat6$ch, woodchat6$age)
+
+# Bundle data
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count)
+
+# Initial values
+inits <- function(){list(mean.sj=runif(1, 0, 0.5))}
+
+# Parameters monitored
+parameters <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "sigma", "N", "ann.growth.rate", "Ntot")
+
+# MCMC settings
+ni <- 40000; nb <- 10000; nc <- 3; nt <- 3; na <- 2000
+
+# Call JAGS (ART <1 min), check convergence and summarize posteriors
+out1 <- jags(jags.data, inits, parameters, "model1.txt", n.iter=ni, n.burnin=nb, n.chains=nc,
+             n.thin=nt, n.adapt=na, parallel=TRUE)
+traceplot(out1)
+print(out1, 3)
+
+
+
+# Model for productivity and population count data only
+# '''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+# Write JAGS model file
+cat(file="model2.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time: our model of population dynamics
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f / 2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    count[t] ~ dnorm(N[1,t] + N[2,t], tau)
+  }
+
+  # Productivity data (Poisson regression model)
+  nJ ~ dpois(n.rep * mean.f)
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+# Bundle data
+jags.data <- list(n.occasions=length(woodchat6$count), nJ=sum(woodchat6$J),
+                  n.rep=sum(woodchat6$B), count=woodchat6$count)
+
+# Initial values
+inits <- function(){list(mean.sj=runif(1, 0, 0.5))}
+
+# Parameters monitored
+parameters <- c("mean.sj", "mean.sa", "mean.f", "sigma", "N", "ann.growth.rate", "Ntot")
+
+# MCMC settings
+ni <- 1000000; nb <- 50000; nc <- 3; nt <- 500; na <- 2000
+
+# Call JAGS (ART 1 min), check convergence and summarize posteriors
+out2 <- jags(jags.data, inits, parameters, "model2.txt", n.iter=ni, n.burnin=nb, n.chains=nc,
+             n.thin=nt, n.adapt=na, parallel=TRUE)
+traceplot(out2)
+print(out2, 3)
+
+
+
+# Model with population count data alone
+# ''''''''''''''''''''''''''''''''''''''
+
+# Write JAGS model file
+cat(file="model3.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time: our model of population dynamics
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f / 2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    count[t] ~ dnorm(N[1,t] + N[2,t], tau)
+  }
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+# Bundle data
+jags.data <- list(n.occasions=length(woodchat6$count), count=woodchat6$count)
+
+# Initial values
+inits <- function(){list(mean.sj=runif(1, 0, 0.5))}
+
+# Parameters monitored
+parameters <- c("mean.sj", "mean.sa", "mean.f", "sigma", "N", "ann.growth.rate", "Ntot")
+
+# MCMC settings
+ni <- 1000000; nb <- 50000; nc <- 3; nt <- 500; na <- 2000
+
+# Call JAGS (ART 1 min), check convergence and summarize posteriors
+out3 <- jags(jags.data, inits, parameters, "model3.txt", n.iter=ni, n.burnin=nb, n.chains=nc,
+             n.thin=nt, n.adapt=na, parallel=TRUE)
+traceplot(out3)
+print(out3, 3)
+
+
+
+```
+
+
+
+```{r}
+
+# ~~~~ extra code for figure 6.3 ~~~~
+cat(file="model14.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau)
+  }
+
+  # Capture-recapture data (CJS model with multinomial likelihood)
+  # Define the multinomial likelihood
+  for (t in 1:(n.occasions-1)){
+    marr.j[t,1:n.occasions] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occasions] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occasions-1)){
+    # Main diagonal
+    q[t] <- 1-p[t]   # Probability of non-recapture
+    pr.j[t,t] <- sj[t]*p[t]
+    pr.a[t,t] <- sa[t]*p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occasions-1)){
+      pr.j[t,j] <- sj[t]*prod(sa[(t+1):j])*prod(q[t:(j-1)])*p[j]
+      pr.a[t,j] <- prod(sa[t:j])*prod(q[t:(j-1)])*p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occasions-1)){
+    pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
+    pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
+  }
+
+  # Productivity data (Poisson regression model)
+  nJ ~ dpois(n.rep * mean.f)
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+# Bundle data
+jags.data <- list(marr.j=marr[,,1], marr.a=marr [,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr [,,2]), nJ=sum(woodchat6$J),
+                  n.rep=sum(woodchat6$B), C= woodchat6$count)
+
+# Initial values
+inits <- function(){list(mean.sj=runif(1, 0, 0.5))}
+
+# Parameters monitored
+parameters <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "sigma", "N",
+                "ann.growth.rate", "Ntot")
+
+# MCMC settings
+ni <- 40000; nb <- 10000; nc <- 3; nt <- 3; na <- 2000
+
+# Call JAGS (ART <1 min)
+out14 <- jags(jags.data, inits, parameters, "model14.txt",
+              n.chains=nc, n.thin=nt, n.iter=ni, n.burnin=nb, n.adapt=na, parallel=TRUE)
+
+# Produce figure 6.3
+mag <- 1
+cex.tif <- mag * 1
+lwd.tif <- mag
+lwd.tif2 <- mag*1.25
+op <- par(las=1, mar=c(4,4,1,1), cex=cex.tif, "mfrow")
+layout(matrix(1:6, 2, 3, byrow=TRUE), widths=c(1.05, 1, 1), heights=c(1, 1), TRUE)
+co <- c("red", "dodgerblue", "darkolivegreen", "orange")
+plot(density(out14$sims.list$mean.sj), xlim=c(0, 1), main="",
+     xlab=expression('Juvenile survival ('*italic(s)[italic(j)]*')'),
+     lwd=lwd.tif2, col=co[1], axes=FALSE)
+lines(density(out1$sims.list$mean.sj), col=co[2], lwd=lwd.tif2)
+lines(density(out2$sims.list$mean.sj), col=co[3], lwd=lwd.tif2)
+lines(density(out3$sims.list$mean.sj), col=co[4], lwd=lwd.tif2)
+axis(1, lwd=lwd.tif)
+axis(2, lwd=lwd.tif)
+legend("topright", legend=c("CMR, Prod., Count", "CMR, Count", "Prod., Count", "Count"),
+       col=co, lwd=rep(lwd.tif2,4), bty="n")
+
+plot(density(out14$sims.list$mean.sa), xlim=c(0, 1), main="",
+     xlab=expression('Adult survival ('*italic(s)[italic(a)]*')'),
+     lwd=lwd.tif2, col=co[1], ylab=NA, axes=FALSE)
+lines(density(out1$sims.list$mean.sa), col=co[2], lwd=lwd.tif2)
+lines(density(out2$sims.list$mean.sa), col=co[3], lwd=lwd.tif2)
+lines(density(out3$sims.list$mean.sa), col=co[4], lwd=lwd.tif2)
+axis(1, lwd=lwd.tif)
+axis(2, lwd=lwd.tif)
+
+plot(density(out14$sims.list$mean.f), xlim=c(0, 10), main="",
+     xlab=expression('Productivity ('*italic(f)*')'),
+     lwd=lwd.tif2, col=co[1], ylab=NA, axes=FALSE)
+lines(density(out1$sims.list$mean.f), col=co[2], lwd=lwd.tif2)
+lines(density(out2$sims.list$mean.f), col=co[3], lwd=lwd.tif2)
+lines(density(out3$sims.list$mean.f), col=co[4], lwd=lwd.tif2)
+axis(1, lwd=lwd.tif)
+axis(2, lwd=lwd.tif)
+
+plot(density(out14$sims.list$N[,1,10]), xlim=c(0, 130), main="",
+     xlab=expression('Number of first year indviduals ('*italic(t)*' = 10)'),
+     lwd=lwd.tif2, col=co[1], axes=FALSE)
+lines(density(out1$sims.list$N[,1,10]), col=co[2], lwd=lwd.tif2)
+lines(density(out2$sims.list$N[,1,10]), col=co[3], lwd=lwd.tif2)
+lines(density(out3$sims.list$N[,1,10]), col=co[4], lwd=lwd.tif2)
+axis(1, lwd=lwd.tif)
+axis(2, lwd=lwd.tif)
+
+plot(density(out14$sims.list$N[,2,10]), xlim=c(0, 130), main="",
+     xlab=expression('Number of adults ('*italic(t)*' = 10)'),
+     lwd=lwd.tif2, col=co[1], ylab=NA, axes=FALSE)
+lines(density(out1$sims.list$N[,2,10]), col=co[2], lwd=lwd.tif2)
+lines(density(out2$sims.list$N[,2,10]), col=co[3], lwd=lwd.tif2)
+lines(density(out3$sims.list$N[,2,10]), col=co[4], lwd=lwd.tif2)
+axis(1, lwd=lwd.tif)
+axis(2, lwd=lwd.tif)
+
+plot(density(out14$sims.list$Ntot[,10]), xlim=c(60, 140), main="",
+     xlab=expression('Total population size ('*italic(t)*' = 10)'),
+     lwd=lwd.tif2, col=co[1], ylab=NA, axes=FALSE)
+lines(density(out1$sims.list$Ntot[,10]), col=co[2], lwd=lwd.tif2)
+lines(density(out2$sims.list$Ntot[,10]), col=co[3], lwd=lwd.tif2)
+lines(density(out3$sims.list$Ntot[,10]), col=co[4], lwd=lwd.tif2)
+axis(1, lwd=lwd.tif)
+axis(2, lwd=lwd.tif)
+par(op)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+```
+
+
+```{r}
+
+library(IPMbook) ; library(jagsUI)
+
+# 6.3 Estimation of demographic parameters for which there is no explicit data
+# ============================================================================
+
+# Additional code for the simulations for Figure 6.4
+
+# Models
+# ------
+
+# 1. IPM all data sets
+
+# Specify the model in BUGS language
+cat(file="ipm1.txt", "
+model {
+  # Priors and constraints
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma.obs ~ dunif(0.5, 100)
+  tau.obs <- pow(sigma.obs, -2)
+
+  # State-space model for count data
+  # Model for the initial population size: discrete uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau.obs)
+  }
+
+  # Poisson regression model for productivity data
+  sJ ~ dpois(nJ * mean.f)
+
+  # Capture-recapture model (multinomial likelihood)
+  # Define the multinomial likelihood
+  for (t in 1:(n.occasions-1)){
+    marr.j[t,1:n.occasions] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occasions] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occasions-1)){
+    # Main diagonal
+    q[t] <- 1-p[t]   # Probability of non-recapture
+    pr.j[t,t] <- sj[t]*p[t]
+    pr.a[t,t] <- sa[t]*p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occasions-1)){
+      pr.j[t,j] <- sj[t]*prod(sa[(t+1):j])*prod(q[t:(j-1)])*p[j]
+      pr.a[t,j] <- prod(sa[t:j])*prod(q[t:(j-1)])*p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occasions-1)){
+    pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
+    pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
+  } #t
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+# 2. IPM: count + CMR
+
+# Specify the model in BUGS language
+cat(file="ipm2.txt", "
+model {
+  # Priors and constraints
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma.obs ~ dunif(0.5, 100)
+  tau.obs <- pow(sigma.obs, -2)
+
+  # State-space model for count data
+  # Model for the initial population size: discrete uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau.obs)
+  }
+
+  # Capture-recapture model (multinomial likelihood)
+  # Define the multinomial likelihood
+  for (t in 1:(n.occasions-1)){
+    marr.j[t,1:n.occasions] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occasions] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occasions-1)){
+    # Main diagonal
+    q[t] <- 1-p[t]   # Probability of non-recapture
+    pr.j[t,t] <- sj[t]*p[t]
+    pr.a[t,t] <- sa[t]*p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occasions-1)){
+      pr.j[t,j] <- sj[t]*prod(sa[(t+1):j])*prod(q[t:(j-1)])*p[j]
+      pr.a[t,j] <- prod(sa[t:j])*prod(q[t:(j-1)])*p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occasions-1)){
+    pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
+    pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
+  } #t
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+# 3. IPM: counts + productivity
+
+# Specify the model in BUGS language
+cat(file="ipm3.txt", "
+model {
+  # Priors and constraints
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma.obs ~ dunif(0.5, 100)
+  tau.obs <- pow(sigma.obs, -2)
+
+  # State-space model for count data
+  # Model for the initial population size: discrete uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau.obs)
+  }
+
+  # Poisson regression model for productivity data
+  sJ ~ dpois(nJ * mean.f)
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+# 4. IPM: counts only
+library(IPMbook) ; library(jagsUI)
+# Specify the model in BUGS language
+cat(file="ipm4.txt", "
+model {
+  # Priors and constraints
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma.obs ~ dunif(0.5, 100)
+  tau.obs <- pow(sigma.obs, -2)
+
+  # State-space model for count data
+  # Model for the initial population size: discrete uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau.obs)
+  }
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+# Simulation parameters
+# ---------------------
+
+# Number of simulations
+# nsim <- 1500
+nsim <- 3  # ~~~ for testing
+
+# Age specific survival probabilities (juv, adult)
+sj <- 0.3
+sa <- 0.55
+
+# Fecundity rate (females)
+fl1 <- 3.1            # productivity of one year old females
+fl2 <- 3.1            # productivity of females older than one year
+
+# Initial population size per age class
+Ni <- c(50, 50)
+
+# Number of years
+T <- 10
+
+# Observation error for the population survey
+sigma <- 10
+
+# Capture and recapture probabilities
+cap <- 0.4                     # initial capture probability
+prec <- 0.6                    # recapture probability
+
+# Probability to find a brood whose reproductive ouput is recorded
+pprod <- 0.5
+
+# Initial values
+inits.ipm <- function(){list(mean.sj=runif(1, 0.2, 0.4), mean.sa=runif(1, 0.45, 0.65))}
+
+# Parameters monitored
+parameters.ipm <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "N", "sigma.obs",
+                    "ann.growth.rate", "Ntot")
+
+# Define matrices to store the result
+res1 <- res2 <- res3 <- res4 <- array(NA, dim = c(45, 11, nsim))
+
+
+# Start simulations
+system.time(
+  for (s in 1:nsim){
+    
+    set.seed(s)
+    
+    ind1 <- simPop(phi=c(sj, sa), f=c(fl1, fl2), nYears=T, sex.ratio=0.5, Im=0, Ni=Ni)
+    ind2 <- simPop(phi=c(sj, sa), f=c(fl1, fl2), nYears=T, sex.ratio=0.5, Im=0, Ni=Ni)
+    ind3 <- simPop(phi=c(sj, sa), f=c(fl1, fl2), nYears=T, sex.ratio=0.5, Im=0, Ni=Ni)
+    
+    # Create the population survey data
+    count <- simCountNorm(ind1$totAdults, sigma)$count
+    
+    # Create the capture histories and the corresponding m-arrays
+    ch <- simCapHist(ind2$state, cap=cap, recap=prec, maxAge=2)
+    marr <- marrayAge(ch$ch, ch$age)
+    
+    # Create productivity data
+    P <- simProd(ind3$reprod, pprod)
+    # Aggregate productivity data to make the model run faster
+    sJ <- colSums(P$prod.agg)[1]
+    nJ <- colSums(P$prod.agg)[2]
+    
+    # Bundle data
+    jags.data.ipm1 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
+                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C=count)
+    jags.data.ipm2 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
+                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=count)
+    jags.data.ipm3 <- list(n.occasions=T, sJ=sJ, nJ=nJ, C=count)
+    jags.data.ipm4 <- list(n.occasions=T, C=count)
+    
+    # Call JAGS from R (jagsUI)
+    # MCMC settings
+    ni <- 10000; nt <- 1; nb <- 5000; nc <- 3; na <- 1000
+    
+    m1 <- try(jags(jags.data.ipm1, inits.ipm, parameters.ipm, "ipm1.txt",
+                   n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, n.adapt = na, parallel = TRUE))
+    if (!inherits(m1, "try-error"))
+      res1[,,s] <- m1$summary
+    
+    m2 <- try(jags(jags.data.ipm2, inits.ipm, parameters.ipm, "ipm2.txt",
+                   n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, n.adapt = na, parallel = TRUE))
+    if (!inherits(m2, "try-error"))
+      res2[,,s] <- m2$summary
+    
+    ni <- 200000; nt <- 1; nb <- 50000; nc <- 3
+    
+    m3 <- try(jags(jags.data.ipm3, inits.ipm, parameters.ipm, "ipm3.txt",
+                   n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, n.adapt = na, parallel = TRUE))
+    if (!inherits(m3,  "try-error"))
+      res3[,,s] <- m3$summary
+    
+    m4 <- try(jags(jags.data.ipm4, inits.ipm, parameters.ipm, "ipm4.txt ",
+                   n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, n.adapt = na, parallel = TRUE))
+    if (!inherits(m4, "try-error"))
+      res4[,,s] <- m4$summary
+    
+    print(s)
+  }  )  # 3 sims took 90 secsm 1500 took 12 hrs
+
+save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.Rdata")
+
+
+
+load("Data Fig 6.4.Rdata")
+
+# Select only the 1000 simulations that have converged
+incl <- which(res1[1,8,]<1.05 & res1[2,8,]<1.05 & res1[4,8,]<1.05 & res1[34,8,]<1.05 &
+                res2[1,8,]<1.05 & res2[2,8,]<1.05 & res2[4,8,]<1.05 & res2[34,8,]<1.05 &
+                res3[1,8,]<1.05 & res3[2,8,]<1.05 & res3[4,8,]<1.05 & res3[34,8,]<1.05 &
+                res4[1,8,]<1.05 & res4[2,8,]<1.05 & res4[4,8,]<1.05 & res4[34,8,]<1.05)
+if(length(incl) > 1000)
+  incl <- incl[1:1000]
+
+op <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name <- c("CR & P & C", "CR & C", "P & C", "C")
+
+lab <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,1,incl], res2[1,1,incl], res3[1,1,incl], res4[1,1,incl]),
+        ylab=lab, outline=FALSE, names=NA,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,2,incl], res2[1,2,incl], res3[1,2,incl], res4[1,2,incl]),
+        ylab=lab, outline=FALSE, names=NA,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,1,incl], res2[2,1,incl], res3[2,1,incl], res4[2,1,incl]),
+        ylab=lab, outline=FALSE, names=NA,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,2,incl], res2[2,2,incl], res3[2,2,incl], res4[2,2,incl]),
+        ylab=lab, outline=FALSE, names=NA,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab <- expression('Productivity ('*italic('f')*')')
+boxplot(cbind(res1[4,1,incl], res2[4,1,incl], res3[4,1,incl], res4[4,1,incl]),
+        ylab=lab, outline=FALSE, names=NA,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab <- expression('SD ('*italic('f')*')')
+boxplot(cbind(res1[4,2,incl], res2[4,2,incl], res3[4,2,incl], res4[4,2,incl]),
+        ylab=lab, outline=FALSE, names=NA,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab <- expression('Population growth rate ('*lambda*')')
+boxplot(cbind(res1[34,1,incl], res2[34,1,incl], res3[34,1,incl], res4[34,1,incl]),
+        ylab=lab,  outline= FALSE, names=name,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+axis(1, labels=name, at=1:4)
+axis(2)
+
+lab <- expression('SD ('*lambda*')')
+boxplot(cbind(res1[34,2,incl], res2[34,2,incl], res3[34,2,incl], res4[34,2,incl]),
+        ylab=lab,  outline=FALSE, names=name,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+axis(1, labels=name, at=1:4)
+axis(2)
+par(op)
+
+```
+
+```{r}
+
+# ~~~~ extra code for figure 6.5 ~~~~
+data(woodchat6)
+marr <- marrayAge(woodchat6$ch, woodchat6$age)
+
+# The productivity data are not aggregated anymore, because it is easier to thin them if the outcome of each brood is used as data. Consequently, the Poisson regression model to analyze these data has been reformulated.
+
+# Bundle data
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=woodchat6$f, n.rep=length(woodchat6$f))
+
+# Write JAGS model file
+cat(file="model15.txt", "
+model {
+  # Priors and linear models
+  mean.sj ~ dunif(0, 1)
+  mean.sa ~ dunif(0, 1)
+  mean.p ~ dunif(0, 1)
+  mean.f ~ dunif(0, 10)
+
+  for (t in 1:(n.occasions-1)){
+    sj[t] <- mean.sj
+    sa[t] <- mean.sa
+    p[t] <- mean.p
+  }
+
+  sigma ~ dunif(0.5, 100)
+  tau <- pow(sigma, -2)
+
+  # Population count data (state-space model)
+  # Model for the initial population size: uniform priors
+  N[1,1] ~ dunif(1, 300)
+  N[2,1] ~ dunif(1, 300)
+
+  # Process model over time: our model for population dynamics
+  for (t in 1:(n.occasions-1)){
+    N[1,t+1] <- mean.f / 2 * mean.sj * (N[1,t] + N[2,t])
+    N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
+  }
+
+  # Observation model
+  for (t in 1:n.occasions){
+    C[t] ~ dnorm(N[1,t] + N[2,t], tau)
+  }
+
+  # Capture-recapture data (CJS model with multinomial likelihood)
+  # Define the multinomial likelihood
+  for (t in 1:(n.occasions-1)){
+    marr.j[t,1:n.occasions] ~ dmulti(pr.j[t,], rel.j[t])
+    marr.a[t,1:n.occasions] ~ dmulti(pr.a[t,], rel.a[t])
+  }
+  # Define the cell probabilities of the m-arrays
+  for (t in 1:(n.occasions-1)){
+    # Main diagonal
+    q[t] <- 1 - p[t]   # Probability of non-recapture
+    pr.j[t,t] <- sj[t] * p[t]
+    pr.a[t,t] <- sa[t] * p[t]
+    # Above main diagonal
+    for (j in (t+1):(n.occasions-1)){
+      pr.j[t,j] <- sj[t] * prod(sa[(t+1):j]) * prod(q[t:(j-1)]) * p[j]
+      pr.a[t,j] <- prod(sa[t:j]) * prod(q[t:(j-1)]) * p[j]
+    } #j
+    # Below main diagonal
+    for (j in 1:(t-1)){
+      pr.j[t,j] <- 0
+      pr.a[t,j] <- 0
+    } #j
+  } #t
+  # Last column: probability of non-recapture
+  for (t in 1:(n.occasions-1)){
+    pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
+    pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
+  }
+
+  # Productivity data (Poisson regression model)
+  for (i in 1:n.rep){
+    f[i] ~ dpois(mean.f)
+  }
+
+  # Derived parameters
+  # Annual population growth rate
+  for (t in 1:(n.occasions-1)){
+    ann.growth.rate[t] <- (N[1,t+1] + N[2,t+1]) / (N[1,t] + N[2,t])
+  }
+  # Total population size
+  for (t in 1:n.occasions){
+    Ntot[t] <- N[1,t] + N[2,t]
+  }
+}
+")
+
+# Initial values
+inits <- function(){list(mean.sj=runif(1, 0, 0.5))}
+
+# Parameters monitored
+parameters <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "sigma", "N", "ann.growth.rate")
+
+# MCMC settings
+ni <- 20000; nb <- 10000; nc <- 3; nt <- 2; na <- 2000
+
+# Call JAGS (ART <1 min)
+m1 <- jags(jags.data, inits, parameters, "model15.txt",
+           n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 90% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.9)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+
+m2 <- jags(jags.data, inits, parameters, "model15.txt",
+           n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 80% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.8)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+m3 <- jags(jags.data, inits, parameters, "model15.txt",
+           n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 70% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.7)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+m4 <- jags(jags.data, inits, parameters, "model15.txt",
+           n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 60% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.6)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+m5 <- jags(jags.data, inits, parameters, "model15.txt",
+           n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 50% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.5)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+m6 <- jags(jags.data, inits, parameters, "model15.txt",
+           n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 40% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.4)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+m7 <- jags(jags.data, inits, parameters, "model15.txt",
+           n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 30% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.3)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+m8 <- jags(jags.data, inits, parameters, "model15.txt",
+           n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 20% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.2)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+m9 <- jags(jags.data, inits, parameters, "model15.txt",
+           n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 10% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.1)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+m10 <- jags(jags.data, inits, parameters, "model15.txt",
+            n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# only 5% of the productivity data are available
+n.fl <- round(length(woodchat6$f) * 0.05)
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count,
+                  f=sample(woodchat6$f, n.fl, replace=TRUE), n.rep=n.fl)
+m11 <- jags(jags.data, inits, parameters, "model15.txt",
+            n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+# no productivity data
+jags.data <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=dim(marr)[2],
+                  rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=woodchat6$count)
+m12 <- jags(jags.data, inits, parameters, "model1.txt",
+            n.iter=ni, n.burnin=nb, n.chains=nc, n.thin=nt, n.adapt=na, parallel=TRUE)
+
+sd.prod <- c(m1$sd$mean.f, m2$sd$mean.f, m3$sd$mean.f, m4$sd$mean.f, m5$sd$mean.f,
+             m6$sd$mean.f, m7$sd$mean.f, m8$sd$mean.f, m9$sd$mean.f, m10$sd$mean.f,
+             m11$sd$mean.f, m12$sd$mean.f)
+
+plot(c(100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 5, 0), sd.prod, type="b",
+     pch=16, axes=FALSE, ylab="SD (productivity)",
+     xlab="Percentage of productivity data (%)")
+axis(2, las=1)
+axis(1)
+
+save(m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, file="Data Fig 6.5.Rdata")
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+```
+
