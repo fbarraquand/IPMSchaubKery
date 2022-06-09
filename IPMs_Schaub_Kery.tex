@@ -186,9 +186,32 @@ Nous avons vu jusqu'ici comment développer un IPM et son utilité pour analyser
 En ce qui concerne la précision de l'estimation des paramètres, il est logique de penser que si un paramètre est présent dans au moins deux vraisemblance de deux modèles différents, son estimation n'en sera que plus précise.
 Il en résulte, après comparaison une à une entre un IPM et les modèles le composant individuellement, que pour un paramètre présent dans tous ces modèles, la mise en commun des informations (avec un IPM) contribue largement à augmenter la précision de l'estimation du paramètre en question. De plus, cette précision augmenterai pour de petites taille d'échantillon (n) (i.e., le Coefficient de Variation a diminué). (documentation : Besbeas et al.,2002; Brooks et al., 2004; Abadi et al., 2010a; Eacket al., 2017)\\
 Afin de réduire les biais, il est possible aussi d'ajouter du poids à nos informations, si jamais un doute subsiste sur un jeu de données. Pour connaître le poids de nos données, une cross-validation est la technique adéquate.\\
-Une des principales utilité des IPMs est d'estimer des "paramètres cachés" (Tavecchia et al., 2009), notamment la survie lorsque les données de capture-recapture ne sont pas disponibles. En effet, les données de comptage de la population, par vraisemblance jointe, vont servir de support d'information pour la survie. Dans le cas précis du modèle testé par Schaub et Kéry, l'estimation correcte de tous les paramètres est faisable avec au minimum les données de capture-recapture et de comptage. Seule, la productivité n'est pas estimable sans de véritable données de productivité. La tolérance, en terme d'estimations et de précision, serait d'un seul paramètre caché à estimer par l'IPM.
-
-
+Une des principales utilité des IPMs est d'estimer des "paramètres cachés" (Tavecchia et al., 2009), notamment la survie lorsque les données de capture-recapture ne sont pas disponibles. En effet, les données de comptage de la population, par vraisemblance jointe, vont servir de support d'information pour la survie. Dans le cas précis du modèle testé par Schaub et Kéry, l'estimation correcte de tous les paramètres est faisable avec au minimum les données de capture-recapture et de comptage. Seule, la productivité n'est pas estimable sans de véritables données de productivité. La tolérance, en terme d'estimations et de précision, serait d'un seul paramètre caché à estimer par l'IPM (Lahoz-Monfort et al., 2014; Cole and McCrea, 2016; Besbeas and Morgan, 2019).\\
+Il est important de vérifier la véracité et l'origine de l'estimation des paramètres cachés. En effet, la baisse de précision induite par l'utilisation d'une source indirecte de données pour un paramètre est à prendre en considération. De plus, des erreurs de patrons temporels peuvent avoir lieu dans certains cas. Un taux démographique qui n'est pas modélisé correctement, à cause d'un taux de survie augmentant au cours du temps (alors que le modèle le considère fixe), peut entraîner ce type d'erreur (SChaub and Fletcher, 2015; Riecke et al., 2019b).\\
+Au sein d'un IPM, nous pouvons nous intéresser à la présence de corrélations entre les paramètres démographiques (e.g., beaucoup de ressources va induire une meilleure survie affectant la productivité). Si l'on cherche à connaître la corrélation entre les taux de survie des adultes et des juvéniles et la productivité, nous commençons d'abord par mettre les taux démographiques sous forme de matrice. Pour cela, nous les prenons à l'échelle log- et logit-transformée :
+\begin{equation}
+\begin{aligned}
+logit(s_{j,t}) = \varepsilon_{1,t}\\
+logit(s_{a,t}) = \varepsilon_{2,t}\\
+logit(f_{t}) = \varepsilon_{3,t}\\
+\end{aligned}
+\end{equation}
+Avec $\varepsilon$ suivant une loi multivariée normale (MVN) :
+$\varepsilon \sim MVN(\mu,\Sigma)$
+Où $\mu$ est un vecteur de moyennes et $\Sigma$ est la matrice de variance-covariance : 
+\begin{equation}
+\Sigma = \begin{pmatrix}
+    \sigma^2_{s_j}      & \sigma_{s_{j},s_{a}}  & \sigma_{s_{j},f}  \\ 
+    \sigma_{s_{a},s_{j}}  & \sigma^2_{s_a}  & \sigma_{s_{a},f}  \\ 
+    \sigma_{f,s_{j}}       & \sigma_{f,s_{a}}  & \sigma^2_{f} 
+\end{pmatrix}
+\end{equation}
+Ici, $ \sigma^2_{\textit{x}}$  correspond à la variance temporelle du paramètre $\textit{x}$ sur l'échelle transformée, et $\sigma_{\textit{x},\textit{y}} $ correspond à la covariance temporelle entre les deux paramètres $\textit{x}$ et $\textit{y}$. Ainsi, le processus de corrélations ressemble à :
+\begin{equation}
+\rho_{s_{j},s_{a}}=\dfrac{\sigma_{s_{j},s_{a}}}{\sqrt{ \sigma^2_{s_j}  \sigma^2_{s_a} }},\quad \rho_{s_{j},f}=\dfrac{\sigma_{s_{j},f}}{\sqrt{ \sigma^2_{s_j}  \sigma^2_{f} }}\quad et \quad \rho_{s_{a},f}=\dfrac{\sigma_{s_{a},f}}{\sqrt{ \sigma^2_{s_a}  \sigma^2_{f} }}
+\end{equation}
+La matrice doit être positive-définie (Steward, 1976).\\
+Dans le cas de l'estimation de la structure de la population, il est important d'être sûr de la structure du modèle de processus. Si ce n'est pas le cas, des analyses de sensibilité ou la moyenne des modèles à poid-égal (Dormann et al., 2018) peuvent apporter plus de robustesse aux estimations.
 
 
 \end{document}
