@@ -187,7 +187,7 @@ En ce qui concerne la précision de l'estimation des paramètres, il est logique
 Il en résulte, après comparaison une à une entre un IPM et les modèles le composant individuellement, que pour un paramètre présent dans tous ces modèles, la mise en commun des informations (avec un IPM) contribue largement à augmenter la précision de l'estimation du paramètre en question. De plus, cette précision augmenterai pour de petites taille d'échantillon (n) (i.e., le Coefficient de Variation a diminué). (documentation : Besbeas et al.,2002; Brooks et al., 2004; Abadi et al., 2010a; Eacket al., 2017)\\
 Afin de réduire les biais, il est possible aussi d'ajouter du poids à nos informations, si jamais un doute subsiste sur un jeu de données. Pour connaître le poids de nos données, une cross-validation est la technique adéquate.\\
 Une des principales utilité des IPMs est d'estimer des "paramètres cachés" (Tavecchia et al., 2009), notamment la survie lorsque les données de capture-recapture ne sont pas disponibles. En effet, les données de comptage de la population, par vraisemblance jointe, vont servir de support d'information pour la survie. Dans le cas précis du modèle testé par Schaub et Kéry, l'estimation correcte de tous les paramètres est faisable avec au minimum les données de capture-recapture et de comptage. Seule, la productivité n'est pas estimable sans de véritables données de productivité. La tolérance, en terme d'estimations et de précision, serait d'un seul paramètre caché à estimer par l'IPM (Lahoz-Monfort et al., 2014; Cole and McCrea, 2016; Besbeas and Morgan, 2019).\\
-Il est important de vérifier la véracité et l'origine de l'estimation des paramètres cachés. En effet, la baisse de précision induite par l'utilisation d'une source indirecte de données pour un paramètre est à prendre en considération. De plus, des erreurs de patrons temporels peuvent avoir lieu dans certains cas. Un taux démographique qui n'est pas modélisé correctement, à cause d'un taux de survie augmentant au cours du temps (alors que le modèle le considère fixe), peut entraîner ce type d'erreur (SChaub and Fletcher, 2015; Riecke et al., 2019b).\\
+Il est important de vérifier la véracité et l'origine de l'estimation des paramètres cachés. En effet, la baisse de précision induite par l'utilisation d'une source indirecte de données pour un paramètre est à prendre en considération. De plus, des erreurs de patrons temporels peuvent avoir lieu dans certains cas. Un taux démographique qui n'est pas modélisé correctement, à cause d'un taux de survie augmentant au cours du temps (alors que le modèle le considère fixe), peut entraîner ce type d'erreur (Schaub and Fletcher, 2015; Riecke et al., 2019b).\\
 Au sein d'un IPM, nous pouvons nous intéresser à la présence de corrélations entre les paramètres démographiques (e.g., beaucoup de ressources va induire une meilleure survie affectant la productivité). Si l'on cherche à connaître la corrélation entre les taux de survie des adultes et des juvéniles et la productivité, nous commençons d'abord par mettre les taux démographiques sous forme de matrice. Pour cela, nous les prenons à l'échelle log- et logit-transformée :
 \begin{equation}
 \begin{aligned}
@@ -211,7 +211,17 @@ Ici, $ \sigma^2_{\textit{x}}$  correspond à la variance temporelle du paramètr
 \rho_{s_{j},s_{a}}=\dfrac{\sigma_{s_{j},s_{a}}}{\sqrt{ \sigma^2_{s_j}  \sigma^2_{s_a} }},\quad \rho_{s_{j},f}=\dfrac{\sigma_{s_{j},f}}{\sqrt{ \sigma^2_{s_j}  \sigma^2_{f} }}\quad et \quad \rho_{s_{a},f}=\dfrac{\sigma_{s_{a},f}}{\sqrt{ \sigma^2_{s_a}  \sigma^2_{f} }}
 \end{equation}
 La matrice doit être positive-définie (Steward, 1976).\\
-Dans le cas de l'estimation de la structure de la population, il est important d'être sûr de la structure du modèle de processus. Si ce n'est pas le cas, des analyses de sensibilité ou la moyenne des modèles à poid-égal (Dormann et al., 2018) peuvent apporter plus de robustesse aux estimations.
-
+Dans le cas de l'estimation de la structure de la population, il est important d'être sûr de la structure du modèle de processus. Si ce n'est pas le cas, des analyses de sensibilité ou la moyenne des modèles à poids-égal (Dormann et al., 2018) peuvent apporter plus de robustesse aux estimations.\\
+Les IPMs présentes une flexibilité importante déclinée sous différents aspects : \\
+- La diversité des type de données qui peuvent être combinées\\
+- Une couverture temporelle inégale des jeux de données (valeurs manquantes pour certaines années)(augmentation de l'incertitude et méthode "average" de forecast)\\
+- Les points temporels de collecte de données ne correspondent pas (collecte à différents moments selon les années et les mois)(IPM saisonier, considérer un paramètre constant à l'année)\\
+- Utilisation d'indices estimés au lieu de comptages pour les données de niveau de la population : \\
+\begin{equation}
+\hat{i_t}\sim Normal(y_{t}, SE(\hat{i_t}^2)) \quad avec \quad y_{t} \sim Normal(N_{t}, \sigma^2_{res})
+\end{equation}
+Où $SE(\hat{i_t}^2)$ est la variance de l'erreur d'estimation de l'indice estimé et $\sigma^2_{res}$ est le terme d'erreur additionnel et résiduel de l'IPM (Fay et al., 2019; Jacobson et al., 2020; McCarthy and Masters, 2005).\\
+- Modèles d'observation pour les données de niveau de la population (distribution de Poisson s'ajuste au mieux avec des données de comptage mais ne prend pas en compte la réduction de la pondération comme une loi normale)(P°267 est importante) \\
+- Priors informatifs et analyses séquentielles.
 
 \end{document}
