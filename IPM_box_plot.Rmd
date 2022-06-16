@@ -13,7 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 list.files("/home/imb/tbeauchard/Bureau/StageCNRS/CodeJAGS/IPMSchaubKery")
 library(IPMbook) ; library(jagsUI)
-getwd()
+list.files(full.names = TRUE)
+dirname("ipm4.txt")
+dirname("ipm1.txt")
+
 # 6.3 Estimation of demographic parameters for which there is no explicit data
 # ============================================================================
 
@@ -398,7 +401,7 @@ op <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
 name <- c("CR & P & C", "CR & C", "P & C", "C")
 
 lab <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
-boxplot(cbind(res1[1,1,incl], res2[1,1,incl], res3[1,1,incl], res4[1,1,incl]),
+boxplot(cbind(res1[1,1,], res2[1,1,], res3[1,1,], res4[1,1,]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 abline(h=sj, lty=2)
@@ -406,14 +409,14 @@ axis(1, labels=NA)
 axis(2)
 
 lab <- expression('SD ('*italic('s')[italic(j)]*')')
-boxplot(cbind(res1[1,2,incl], res2[1,2,incl], res3[1,2,incl], res4[1,2,incl]),
+boxplot(cbind(res1[1,2,], res2[1,2,], res3[1,2,], res4[1,2,]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=NA)
 axis(2)
 
 lab <- expression('Adult survival ('*italic('s')[italic(a)]*')')
-boxplot(cbind(res1[2,1,incl], res2[2,1,incl], res3[2,1,incl], res4[2,1,incl]),
+boxplot(cbind(res1[2,1,], res2[2,1,], res3[2,1,], res4[2,1,]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 abline(h=sa, lty=2)
@@ -421,14 +424,14 @@ axis(1, labels=NA)
 axis(2)
 
 lab <- expression('SD ('*italic('s')[italic(a)]*')')
-boxplot(cbind(res1[2,2,incl], res2[2,2,incl], res3[2,2,incl], res4[2,2,incl]),
+boxplot(cbind(res1[2,2,], res2[2,2,], res3[2,2,], res4[2,2,]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=NA)
 axis(2)
 
 lab <- expression('Productivity ('*italic('f')*')')
-boxplot(cbind(res1[4,1,incl], res2[4,1,incl], res3[4,1,incl], res4[4,1,incl]),
+boxplot(cbind(res1[4,1,], res2[4,1,], res3[4,1,], res4[4,1,]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 abline(h=fl1, lty=2)
@@ -436,26 +439,25 @@ axis(1, labels=NA)
 axis(2)
 
 lab <- expression('SD ('*italic('f')*')')
-boxplot(cbind(res1[4,2,incl], res2[4,2,incl], res3[4,2,incl], res4[4,2,incl]),
+boxplot(cbind(res1[4,2,], res2[4,2,], res3[4,2,], res4[4,2,]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=NA)
 axis(2)
 
 lab <- expression('Population growth rate ('*lambda*')')
-boxplot(cbind(res1[34,1,incl], res2[34,1,incl], res3[34,1,incl], res4[34,1,incl]),
+boxplot(cbind(res1[34,1,], res2[34,1,], res3[34,1,], res4[34,1,]),
         ylab=lab,  outline= FALSE, names=name,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=name, at=1:4)
 axis(2)
 
 lab <- expression('SD ('*lambda*')')
-boxplot(cbind(res1[34,2,incl], res2[34,2,incl], res3[34,2,incl], res4[34,2,incl]),
+boxplot(cbind(res1[34,2,], res2[34,2,], res3[34,2,], res4[34,2,]),
         ylab=lab,  outline=FALSE, names=name,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=name, at=1:4)
 axis(2)
 par(op)
-
 
 ```
