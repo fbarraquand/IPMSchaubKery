@@ -23,7 +23,67 @@ May, 2022
 
 Lecture du livre INTEGRATED POPULATION MODELS, Theory and Ecological Applications with R and JAGS écrit par Michael Schaub et Marc Kéry (Chapitres 3, 5 et 6): \\
 - Répétabilité des résultats\\
-- Reproduction des boxplots des moyennes et des écart-type des posterior (page 250 du livre) en partant de deux hypothèses : (1)Estimation des différents paramètres démographiques (productivité,taux de croissance et de survie...) à partir des données de comptage sans dissocier les classes d'âges au sein de ces dernières ($n(t)$).(2)Estimation des différents paramètres démographiques (productivité,taux de croissance et de survie...) à partir des données de comptage en dissociant les classes d'âges au sein de ces dernières ($n_{a}(t)$ et $n_{j}(t)$).
+- Reproduction des boxplots des moyennes et des écart-type des posterior (page 250 du livre) en partant de deux hypothèses : (1)Estimation des différents paramètres démographiques (productivité,taux de croissance et de survie...) à partir des données de comptage sans dissocier les classes d'âges au sein de ces dernières ($n(t)$).(2)Estimation des différents paramètres démographiques (productivité,taux de croissance et de survie...) à partir des données de comptage en dissociant les classes d'âges au sein de ces dernières ($n_{a}(t)$ et $n_{j}(t)$).\\
+\section{Écriture des équations des différents modèles composants un IPM}
+En ayant pour point de départ la vraisemblance jointe d'un IPM, correspondant à la vraisemblance du modèle "ipm1.txt" (code $IPMboxplot.Rmd$) :\\
+\begin{equation}
+\begin{aligned}
+L_{IPM}(N, s_{j}, s_{a}, p, f_{1}, f_{a}, \sigma^{2}|\textit{m},J,C)= \\
+L_{I}(N_{1})\times L_{S}(N_{2,....T}, s_{j}, s_{a}, f_{1}, f_{a})\times L_{O}(N,\sigma^{2}|C)\times L_{CJS}(s_{j}, s_{a}, p|\textit{m})\times L_{p}(f_{1}, f_{a}|J)
+\end{aligned}
+\end{equation}
+Il est facile de la décliner pour l'appliquer aux trois autres modèles présents dans le code. Pour le cas du modèle "ipm2.txt", sans la productivité (soit la régression de Poisson), nous avons : 
+\begin{equation}
+\begin{aligned}
+L_{IPM}(N, s_{j}, s_{a}, p, f_{1}, f_{a}, \sigma^{2}|\textit{m},C)= \\
+L_{I}(N_{1})\times L_{S}(N_{2,....T}, s_{j}, s_{a}, f_{1}, f_{a})\times L_{O}(N,\sigma^{2}|C)\times L_{CJS}(s_{j}, s_{a}, p|\textit{m})
+\end{aligned}
+\end{equation}
+Si nous portons maintenant notre attention sur le modèle "imp3.txt", c'est-à-dire sans la partie capture-marquage-recapture (soit le modèle CJS), nous avons :
+\begin{equation}
+\begin{aligned}
+L_{IPM}(N, s_{j}, s_{a}, f_{1}, f_{a}, \sigma^{2}|J,C)= \\
+L_{I}(N_{1})\times L_{S}(N_{2,....T}, s_{j}, s_{a}, f_{1}, f_{a})\times L_{O}(N,\sigma^{2}|C)\times L_{p}(f_{1}, f_{a}|J)
+\end{aligned}
+\end{equation}
+Finalement, il ne reste plus que le modèle "ipm4.txt", correspondant uniquement aux données de comptage (soit uniquement le modèle espace d'état et la partie observation), pour lequel nous avons : 
+\begin{equation}
+\begin{aligned}
+L_{IPM}(N, s_{j}, s_{a}, f_{1}, f_{a}, \sigma^{2}|C)= \\
+L_{I}(N_{1})\times L_{S}(N_{2,....T}, s_{j}, s_{a}, f_{1}, f_{a})\times L_{O}(N,\sigma^{2}|C)
+\end{aligned}
+\end{equation}
+
+Il est important de noter qu'à ce stade, ce dernier modèle ne correspond techniquement pas à un IPM.\\
+Dès lors que ces vraisemblances jointes sont écrites, nous pouvons nous intéresser individuellement à l'écriture des modèles composants un IPM (toujours dans le code $IPMboxplot.Rmd$). En effet, pour le modèle concernant l'estimation de la productivité (Régression de Poisson), nous avons :
+\begin{equation}
+N_{t+1}=N_{t}\dfrac{f_1}{2}s_{j}+N_{t}\dfrac{f_a}{2}s_{a}
+\end{equation}
+En ce qui concerne le modèle portant sur les données de comptage, soit le modèle espace d'état, nous avons l'équation suivante : 
+\begin{equation}
+N_{t+1}=N_{t}s_{j}+B\dfrac{1}{2}s_{j}N_t
+\end{equation}
+Avec B, une constante, étant la fécondité maximale. Si l'on souhaite rendre ce paramètre densité dépendant alors il faut ajouter un paramètre $\beta$ suivant une distribution Beta : 
+\begin{equation}
+N_{t+1}=N_{t}s_{j}+B\dfrac{1}{2}s_{j}\exp^{-\beta N_{t}} N_t
+\end{equation}
+In fine, le dernier modèle composant un IPM étant un modèle Cormack-Jolly-Seber divisé en deux paramètres, les probabilités de survie et de capture-recapture (et non-capture) des individus, nous avons :
+\begin{equation}
+\begin{aligned}
+logit(\phi_{i,t})= \mu_{s_{j}, s_{a}}+\beta_{m{i, t}}+\varepsilon_i \\
+avec \quad \varepsilon_{i} \sim Normal(0, \sigma^2)
+\end{aligned}
+\end{equation}
+\begin{equation}
+\begin{aligned}
+logit(p_{i,t})= \beta_{m{i, t}}+ \gamma_{i} \\
+avec \quad  \gamma_{i}\sim Normal(0, \sigma^2)
+\end{aligned}
+\end{equation}
+Où $\beta_{m{i, t}}$ sont les effets de la classe m de l'individu i au temps t et $\varepsilon_i$ correspond aux termes de fragilité individuelle.\\
+Dès lors les vraisemblances jointes et les équations individuelles des modèles écrites,nous pouvons nous tourner vers le vrai but de cette étude. Un étude où nous simulons et où nous estimons ces modèles avec des comptages à la fois sur les juvéniles et sur les adultes.
+
 
 
 \end{document}
+
