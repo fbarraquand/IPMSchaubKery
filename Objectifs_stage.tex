@@ -55,34 +55,18 @@ L_{I}(N_{1})\times L_{S}(N_{2,....T}, s_{j}, s_{a}, f_{1}, f_{a})\times L_{O}(N,
 \end{equation}
 
 Il est important de noter qu'à ce stade, ce dernier modèle ne correspond techniquement pas à un IPM.\\
-Dès lors que ces vraisemblances jointes sont écrites, nous pouvons nous intéresser individuellement à l'écriture des modèles composants un IPM (toujours dans le code $IPMboxplot.Rmd$). En effet, pour le modèle concernant l'estimation de la productivité (Régression de Poisson), nous avons :
+Dès lors que ces vraisemblances jointes sont écrites, nous pouvons nous intéresser individuellement à l'écriture des modèles composants un IPM (toujours dans le code $IPMboxplot.Rmd$). En effet, pour le modèle concernant l'estimation des données de comptage, soit le modèle espace d'état, nous avons l'équation suivante : 
 \begin{equation}
-N_{t+1}=N_{t}\dfrac{f_1}{2}s_{j}+N_{t}\dfrac{f_a}{2}s_{a}
+N_{t+1}=N_{t}s_{a}+f\dfrac{1}{2}s_{j}N_t
 \end{equation}
-En ce qui concerne le modèle portant sur les données de comptage, soit le modèle espace d'état, nous avons l'équation suivante : 
-\begin{equation}
-N_{t+1}=N_{t}s_{j}+B\dfrac{1}{2}s_{j}N_t
-\end{equation}
-Avec B, une constante, étant la fécondité maximale. Si l'on souhaite rendre ce paramètre densité dépendant alors il faut ajouter un paramètre $\beta$ suivant une distribution Beta : 
-\begin{equation}
-N_{t+1}=N_{t}s_{j}+B\dfrac{1}{2}s_{j}\exp^{-\beta N_{t}} N_t
-\end{equation}
-In fine, le dernier modèle composant un IPM étant un modèle Cormack-Jolly-Seber divisé en deux paramètres, les probabilités de survie et de capture-recapture (et non-capture) des individus, nous avons :
-\begin{equation}
-\begin{aligned}
-logit(\phi_{i,t})= \mu_{s_{j}, s_{a}}+\beta_{m{i, t}}+\varepsilon_i \\
-avec \quad \varepsilon_{i} \sim Normal(0, \sigma^2)
-\end{aligned}
-\end{equation}
-\begin{equation}
-\begin{aligned}
-logit(p_{i,t})= \beta_{m{i, t}}+ \gamma_{i} \\
-avec \quad  \gamma_{i}\sim Normal(0, \sigma^2)
-\end{aligned}
-\end{equation}
-Où $\beta_{m{i, t}}$ sont les effets de la classe m de l'individu i au temps t et $\varepsilon_i$ correspond aux termes de fragilité individuelle.\\
 Dès lors les vraisemblances jointes et les équations individuelles des modèles écrites,nous pouvons nous tourner vers le vrai but de cette étude. Un étude où nous simulons et où nous estimons ces modèles avec des comptages à la fois sur les juvéniles et sur les adultes.
-
+Ce qui donnerait, pour le modèle espace d'état : 
+\begin{equation}
+\begin{aligned}
+   N_{j, t+1} = (1-\gamma)*N_{j, t}*s_{j}+0.5*f*N_{a, t}\\
+   N_{a, t+1} = N_{a, t}*s_{a}+ \gamma *N_{s, t}*s_j
+\end{aligned}
+\end{equation}
 
 
 \end{document}
