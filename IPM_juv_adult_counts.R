@@ -22,35 +22,29 @@ model {
   mean.sa ~ dunif(0, 1)
   mean.p ~ dunif(0, 1)
   mean.f ~ dunif(0, 10)
-
   for (t in 1:(n.occasions-1)){
     sj[t] <- mean.sj
     sa[t] <- mean.sa
     p[t] <- mean.p
   }
-
   sigma.obs ~ dunif(0.5, 100)
   tau.obs <- pow(sigma.obs, -2)
-
   # State-space model for count data
   # Model for the initial population size: discrete uniform priors
   N[1,1] ~ dunif(1, 300)
   N[2,1] ~ dunif(1, 300)
-
   # Process model over time
   for (t in 1:(n.occasions-1)){
     N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
     N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
   }
-
   # Observation model
   for (t in 1:n.occasions){
-    C[t] ~ dnorm(N[1,t] + N[2,t], tau.obs)
+    C_j[t] ~ dnorm(N[1,t], tau.obs)
+    C_ad[t] ~ dnorm(N[2,t], tau.obs)
   }
-
   # Poisson regression model for productivity data
   sJ ~ dpois(nJ * mean.f)
-
   # Capture-recapture model (multinomial likelihood)
   # Define the multinomial likelihood
   for (t in 1:(n.occasions-1)){
@@ -79,7 +73,6 @@ model {
     pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
     pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
   } #t
-
   # Derived parameters
   # Annual population growth rate
   for (t in 1:(n.occasions-1)){
@@ -102,32 +95,27 @@ model {
   mean.sa ~ dunif(0, 1)
   mean.p ~ dunif(0, 1)
   mean.f ~ dunif(0, 10)
-
   for (t in 1:(n.occasions-1)){
     sj[t] <- mean.sj
     sa[t] <- mean.sa
     p[t] <- mean.p
   }
-
   sigma.obs ~ dunif(0.5, 100)
   tau.obs <- pow(sigma.obs, -2)
-
   # State-space model for count data
   # Model for the initial population size: discrete uniform priors
   N[1,1] ~ dunif(1, 300)
   N[2,1] ~ dunif(1, 300)
-
   # Process model over time
   for (t in 1:(n.occasions-1)){
     N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
     N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
   }
-
   # Observation model
   for (t in 1:n.occasions){
-    C[t] ~ dnorm(N[1,t] + N[2,t], tau.obs)
+    C_j[t] ~ dnorm(N[1,t], tau.obs)
+    C_ad[t] ~ dnorm(N[2,t], tau.obs)
   }
-
   # Capture-recapture model (multinomial likelihood)
   # Define the multinomial likelihood
   for (t in 1:(n.occasions-1)){
@@ -156,7 +144,6 @@ model {
     pr.j[t,n.occasions] <- 1-sum(pr.j[t,1:(n.occasions-1)])
     pr.a[t,n.occasions] <- 1-sum(pr.a[t,1:(n.occasions-1)])
   } #t
-
   # Derived parameters
   # Annual population growth rate
   for (t in 1:(n.occasions-1)){
@@ -179,35 +166,29 @@ model {
   mean.sa ~ dunif(0, 1)
   mean.p ~ dunif(0, 1)
   mean.f ~ dunif(0, 10)
-
   for (t in 1:(n.occasions-1)){
     sj[t] <- mean.sj
     sa[t] <- mean.sa
     p[t] <- mean.p
   }
-
   sigma.obs ~ dunif(0.5, 100)
   tau.obs <- pow(sigma.obs, -2)
-
   # State-space model for count data
   # Model for the initial population size: discrete uniform priors
   N[1,1] ~ dunif(1, 300)
   N[2,1] ~ dunif(1, 300)
-
   # Process model over time
   for (t in 1:(n.occasions-1)){
     N[1,t+1] <- mean.f/2 * mean.sj * (N[1,t] + N[2,t])
     N[2,t+1] <- mean.sa * (N[1,t] + N[2,t])
   }
-
   # Observation model
   for (t in 1:n.occasions){
-    C[t] ~ dnorm(N[1,t] + N[2,t], tau.obs)
+    C_j[t] ~ dnorm(N[1,t], tau.obs)
+    C_ad[t] ~ dnorm(N[2,t], tau.obs)
   }
-
   # Poisson regression model for productivity data
   sJ ~ dpois(nJ * mean.f)
-
   # Derived parameters
   # Annual population growth rate
   for (t in 1:(n.occasions-1)){
@@ -219,6 +200,7 @@ model {
   }
 }
 ")
+
 
 # 4. IPM: counts only
 
@@ -253,7 +235,8 @@ model {
 
   # Observation model
   for (t in 1:n.occasions){
-    C[t] ~ dnorm(N[1,t] + N[2,t], tau.obs)
+   C_j[t] ~ dnorm(N[1,t], tau.obs)
+    C_ad[t] ~ dnorm(N[2,t], tau.obs)
   }
 
   # Derived parameters
@@ -270,10 +253,9 @@ model {
 
 # Simulation parameters
 # ---------------------
-
 # Number of simulations
 # nsim <- 1500
-nsim <- 3 # ~~~ for testing
+nsim <- 10# ~~~ for testing
 
 # Age specific survival probabilities (juv, adult)
 sj <- 0.3
@@ -303,12 +285,12 @@ pprod <- 0.5
 inits.ipm <- function(){list(mean.sj=runif(1, 0.2, 0.4), mean.sa=runif(1, 0.45, 0.65))}
 
 # Parameters monitored
-parameters.ipm <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "N", "sigma.obs",
+parameters.ipm <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "N", "sigma.obs","C_j","C_ad",
                     "ann.growth.rate", "Ntot")
 
 # Define matrices to store the result
-res1 <- res2 <- res3 <- res4 <- array(NA, dim = c(45, 11, nsim))
-
+res1 <- res2 <- res3 <- array(NA, dim = c(65, 11, nsim))
+res4  <- array(NA, dim = c(64, 11, nsim))
 
 # Start simulations
 system.time(
@@ -322,6 +304,8 @@ system.time(
     
     # Create the population survey data
     count <- simCountNorm(ind1$totAdults, sigma)$count
+    countJ <- simCountNorm(ind1$breeders[1,], sigma)$count
+    
     
     # Create the capture histories and the corresponding m-arrays
     ch <- simCapHist(ind2$state, cap=cap, recap=prec, maxAge=2)
@@ -335,11 +319,11 @@ system.time(
     
     # Bundle data
     jags.data.ipm1 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
-                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C=count)
+                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C=c(countJ,count))
     jags.data.ipm2 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
-                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=count)
-    jags.data.ipm3 <- list(n.occasions=T, sJ=sJ, nJ=nJ, C=count)
-    jags.data.ipm4 <- list(n.occasions=T, C=count)
+                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=c(countJ,count))
+    jags.data.ipm3 <- list(n.occasions=T, sJ=sJ, nJ=nJ, C=c(countJ,count))
+    jags.data.ipm4 <- list(n.occasions=T, C=c(countJ,count))
     
     # Call JAGS from R (jagsUI)
     # MCMC settings
@@ -366,25 +350,25 @@ system.time(
                    n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, n.adapt = na, parallel = TRUE))
     if (!inherits(m4, "try-error"))
       res4[,,s] <- m4$summary
-    print(m4)
+  
     print(s)
   }  )  # 3 sims took 90 secsm 1500 took 12 hrs
-
+print(m1)
 save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.Rdata")
-print(m4)
+
 
 
 load("Data Fig 6.4.Rdata")
 
 # Select only the 1000 simulations that have converged
-incl <- which(res1[1,8,]<1.05 & res1[2,8,]<1.05 & res1[4,8,]<1.05 & res1[34,8,]<1.05 &
-                res2[1,8,]<1.05 & res2[2,8,]<1.05 & res2[4,8,]<1.05 & res2[34,8,]<1.05 &
-                res3[1,8,]<1.05 & res3[2,8,]<1.05 & res3[4,8,]<1.05 & res3[34,8,]<1.05 &
-                res4[1,8,]<1.05 & res4[2,8,]<1.05 & res4[4,8,]<1.05 & res4[34,8,]<1.05)
+incl <- which(res1[1,8,]<1.05 & res1[2,8,]<1.05 & res1[4,8,]<1.05 & res1[35,8,]<1.05 & res1[45,8,]<1.05 & res1[54,8,]<1.05 &
+                res2[1,8,]<1.05 & res2[2,8,]<1.05 & res2[4,8,]<1.05 & res2[35,8,]<1.05 & res2[45,8,]<1.05 & res2[54,8,]<1.05 &
+                res3[1,8,]<1.05 & res3[2,8,]<1.05 & res3[4,8,]<1.05 & res3[35,8,]<1.05 & res3[45,8,]<1.05 & res3[54,8,]<1.05 &
+                res4[1,8,]<1.05 & res4[2,8,]<1.05 & res4[4,8,]<1.05 & res4[35,8,]<1.05 &re41[45,8,]<1.05 & res4[54,8,]<1.05)
 if(length(incl) > 1000)
   incl <- incl[1:1000]
 
-op <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+op <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(6, 2))
 name <- c("CR & P & C", "CR & C", "P & C", "C")
 
 lab <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
@@ -432,17 +416,50 @@ boxplot(cbind(res1[4,2,], res2[4,2,], res3[4,2,], res4[4,2,]),
 axis(1, labels=NA)
 axis(2)
 
+
+
+lab <- expression('Juvenile counts ('*italic('C')[italic(j)]*')')
+boxplot(cbind(res1[35,1,], res2[35,1,], res3[35,1,], res4[35,1,]),
+        ylab=lab,  outline= FALSE, names=name,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+axis(1, labels=name, at=1:4)
+axis(2)
+
+lab <- expression('SD ('*italic('C')[italic(j)]*')')
+boxplot(cbind(res1[35,2,], res2[35,2,], res3[35,2,], res4[35,2,]),
+        ylab=lab,  outline=FALSE, names=name,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+axis(1, labels=name, at=1:4)
+axis(2)
+
+
+lab <- expression('Adult counts ('*italic('C')[italic(ad)]*')')
+boxplot(cbind(res1[45,1,], res2[45,1,], res3[45,1,], res4[45,1,]),
+        ylab=lab,  outline= FALSE, names=name,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+axis(1, labels=name, at=1:4)
+axis(2)
+
+lab <- expression('SD ('*italic('C')[italic(ad)]*')')
+boxplot(cbind(res1[45,2,], res2[45,2,], res3[45,2,], res4[45,2,]),
+        ylab=lab,  outline=FALSE, names=name,
+        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
+axis(1, labels=name, at=1:4)
+axis(2)
+
 lab <- expression('Population growth rate ('*lambda*')')
-boxplot(cbind(res1[34,1,], res2[34,1,], res3[34,1,], res4[34,1,]),
+boxplot(cbind(res1[54,1,], res2[54,1,], res3[54,1,], res4[54,1,]),
         ylab=lab,  outline= FALSE, names=name,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=name, at=1:4)
 axis(2)
 
 lab <- expression('SD ('*lambda*')')
-boxplot(cbind(res1[34,2,], res2[34,2,], res3[34,2,], res4[34,2,]),
+boxplot(cbind(res1[54,2,], res2[54,2,], res3[54,2,], res4[54,2,]),
         ylab=lab,  outline=FALSE, names=name,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=name, at=1:4)
 axis(2)
+
+
 par(op)
