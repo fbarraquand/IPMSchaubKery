@@ -289,8 +289,8 @@ parameters.ipm <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "N", "sigma.obs","
                     "ann.growth.rate", "Ntot")
 
 # Define matrices to store the result
-res1 <- res2 <- res3 <- array(NA, dim = c(65, 11, nsim))
-res4  <- array(NA, dim = c(64, 11, nsim))
+res1 <- res2 <- res3 <- res4 <- array(NA, dim = c(65, 11, nsim))
+#res4  <- array(NA, dim = c(64, 11, nsim))
 
 # Start simulations
 system.time(
@@ -319,11 +319,11 @@ system.time(
     
     # Bundle data
     jags.data.ipm1 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
-                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C=c(countJ,count))
+                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C_j=countJ, C_ad=count)
     jags.data.ipm2 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
-                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C=c(countJ,count))
-    jags.data.ipm3 <- list(n.occasions=T, sJ=sJ, nJ=nJ, C=c(countJ,count))
-    jags.data.ipm4 <- list(n.occasions=T, C=c(countJ,count))
+                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C_j=countJ, C_ad=count)
+    jags.data.ipm3 <- list(n.occasions=T, sJ=sJ, nJ=nJ, C_j=countJ, C_ad=count)
+    jags.data.ipm4 <- list(n.occasions=T, C_j=countJ, C_ad=count)
     
     # Call JAGS from R (jagsUI)
     # MCMC settings
