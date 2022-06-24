@@ -255,7 +255,7 @@ model {
 # ---------------------
 # Number of simulations
 # nsim <- 1500
-nsim <- 5# ~~~ for testing
+nsim <- 100# ~~~ for testing
 
 # Age specific survival probabilities (juv, adult)
 sj <- 0.3
@@ -303,7 +303,7 @@ system.time(
     ind3 <- simPop(phi=c(sj, sa), f=c(fl1, fl2), nYears=T, sex.ratio=0.5, Im=0, Ni=Ni)
     
     # Create the population survey data
-    count <- simCountNorm(ind1$totAdults, sigma)$count
+    countA <- simCountNorm(ind1$breeders[2,], sigma)$count
     countJ <- simCountNorm(ind1$breeders[1,], sigma)$count
     
     
@@ -319,11 +319,11 @@ system.time(
     
     # Bundle data
     jags.data.ipm1 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
-                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C_j=countJ, C_ad=count)
+                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), sJ=sJ, nJ=nJ, C_j=countJ, C_ad=countA)
     jags.data.ipm2 <- list(marr.j=marr[,,1], marr.a=marr[,,2], n.occasions=T,
-                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C_j=countJ, C_ad=count)
-    jags.data.ipm3 <- list(n.occasions=T, sJ=sJ, nJ=nJ, C_j=countJ, C_ad=count)
-    jags.data.ipm4 <- list(n.occasions=T, C_j=countJ, C_ad=count)
+                           rel.j=rowSums(marr[,,1]), rel.a=rowSums(marr[,,2]), C_j=countJ, C_ad=countA)
+    jags.data.ipm3 <- list(n.occasions=T, sJ=sJ, nJ=nJ, C_j=countJ, C_ad=countA)
+    jags.data.ipm4 <- list(n.occasions=T, C_j=countJ, C_ad=countA)
     
     # Call JAGS from R (jagsUI)
     # MCMC settings
@@ -356,7 +356,7 @@ system.time(
 print(m1)
 save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.Rdata")
 
-
+traceplot(m4)
 
 load("Data Fig 6.4.Rdata")
 
