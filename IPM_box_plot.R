@@ -272,7 +272,7 @@ model {
 # ---------------------
 
 # Number of simulations
-nsim <- 100
+nsim <- 500
 #nsim <- 3 # ~~~ for testing
 
 # Age specific survival probabilities (juv, adult)
@@ -370,11 +370,11 @@ system.time(
     print(s)
   }  )  # 3 sims took 90 secsm 1500 took 12 hrs
 
-save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.Rdata")
+save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.500sim.28062022.Rdata")
 print(m4)
 
 
-load("Data Fig 6.4.Rdata")
+load("Data Fig 6.4.50sim.28062022.Rdata")
 
 # Select only the 1000 simulations that have converged
 incl <- which(res1[1,8,]<1.05 & res1[2,8,]<1.05 & res1[4,8,]<1.05 & res1[34,8,]<1.05 &
