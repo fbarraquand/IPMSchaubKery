@@ -255,7 +255,7 @@ model {
 # ---------------------
 # Number of simulations
 # nsim <- 1500
-nsim <- 100# ~~~ for testing
+nsim <- 500# ~~~ for testing
 
 # Age specific survival probabilities (juv, adult)
 sj <- 0.3
@@ -285,11 +285,11 @@ pprod <- 0.5
 inits.ipm <- function(){list(mean.sj=runif(1, 0.2, 0.4), mean.sa=runif(1, 0.45, 0.65))}
 
 # Parameters monitored
-parameters.ipm <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "N", "sigma.obs","C_j","C_ad",
+parameters.ipm <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "N", "sigma.obs",
                     "ann.growth.rate", "Ntot")
 
 # Define matrices to store the result
-res1 <- res2 <- res3 <- res4 <- array(NA, dim = c(65, 11, nsim))
+res1 <- res2 <- res3 <- res4 <- array(NA, dim = c(45, 11, nsim))
 #res4  <- array(NA, dim = c(64, 11, nsim))
 
 # Start simulations
@@ -303,8 +303,9 @@ system.time(
     ind3 <- simPop(phi=c(sj, sa), f=c(fl1, fl2), nYears=T, sex.ratio=0.5, Im=0, Ni=Ni)
     
     # Create the population survey data
-    countA <- simCountNorm(ind1$breeders[2,], sigma)$count
-    countJ <- simCountNorm(ind1$breeders[1,], sigma)$count
+   countJ <- simCountNorm(ind1$breeders[1,], sigma)$count
+   countA <- simCountNorm(ind1$breeders[2,], sigma)$count
+    
     
     
     # Create the capture histories and the corresponding m-arrays
@@ -353,22 +354,28 @@ system.time(
   
     print(s)
   }  )  # 3 sims took 90 secsm 1500 took 12 hrs
+#exemple de sortie
 print(m1)
+#sauvegarde des matrices de résumés
 save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.Rdata")
 
-traceplot(m4)
+#vérification de la convergence des chaînes MCMC
+#traceplot(m1)
+#traceplot(m2)
+#traceplot(m3)
+#traceplot(m4)
 
 load("Data Fig 6.4.Rdata")
 
 # Select only the 1000 simulations that have converged
-incl <- which(res1[1,8,]<1.05 & res1[2,8,]<1.05 & res1[4,8,]<1.05 & res1[35,8,]<1.05 & res1[45,8,]<1.05 & res1[54,8,]<1.05 &
-                res2[1,8,]<1.05 & res2[2,8,]<1.05 & res2[4,8,]<1.05 & res2[35,8,]<1.05 & res2[45,8,]<1.05 & res2[54,8,]<1.05 &
-                res3[1,8,]<1.05 & res3[2,8,]<1.05 & res3[4,8,]<1.05 & res3[35,8,]<1.05 & res3[45,8,]<1.05 & res3[54,8,]<1.05 &
-                res4[1,8,]<1.05 & res4[2,8,]<1.05 & res4[4,8,]<1.05 & res4[35,8,]<1.05 &res4[45,8,]<1.05 & res4[54,8,]<1.05)
+incl <- which(res1[1,8,]<1.05 & res1[2,8,]<1.05 & res1[4,8,]<1.05 & res1[34,8,]<1.05 &
+                res2[1,8,]<1.05 & res2[2,8,]<1.05 & res2[4,8,]<1.05 & res2[34,8,]<1.05 &
+                res3[1,8,]<1.05 & res3[2,8,]<1.05 & res3[4,8,]<1.05 & res3[34,8,]<1.05 &
+                res4[1,8,]<1.05 & res4[2,8,]<1.05 & res4[4,8,]<1.05 & res4[34,8,]<1.05)
 if(length(incl) > 1000)
   incl <- incl[1:1000]
 
-op <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(6, 2))
+op <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
 name <- c("CR & P & C", "CR & C", "P & C", "C")
 
 lab <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
@@ -416,50 +423,17 @@ boxplot(cbind(res1[4,2,incl], res2[4,2,incl], res3[4,2,incl], res4[4,2,incl]),
 axis(1, labels=NA)
 axis(2)
 
-
-
-lab <- expression('Juvenile counts ('*italic('C')[italic(j)]*')')
-boxplot(cbind(res1[35,1,incl], res2[35,1,incl], res3[35,1,incl], res4[35,1,incl]),
-        ylab=lab,  outline= FALSE, names=name,
-        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
-axis(1, labels=name, at=1:4)
-axis(2)
-
-lab <- expression('SD ('*italic('C')[italic(j)]*')')
-boxplot(cbind(res1[35,2,incl], res2[35,2,incl], res3[35,2,incl], res4[35,2,incl]),
-        ylab=lab,  outline=FALSE, names=name,
-        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
-axis(1, labels=name, at=1:4)
-axis(2)
-
-
-lab <- expression('Adult counts ('*italic('C')[italic(ad)]*')')
-boxplot(cbind(res1[45,1,incl], res2[45,1,incl], res3[45,1,incl], res4[45,1,incl]),
-        ylab=lab,  outline= FALSE, names=name,
-        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
-axis(1, labels=name, at=1:4)
-axis(2)
-
-lab <- expression('SD ('*italic('C')[italic(ad)]*')')
-boxplot(cbind(res1[45,2,incl], res2[45,2,incl], res3[45,2,incl], res4[45,2,incl]),
-        ylab=lab,  outline=FALSE, names=name,
-        col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
-axis(1, labels=name, at=1:4)
-axis(2)
-
 lab <- expression('Population growth rate ('*lambda*')')
-boxplot(cbind(res1[54,1,incl], res2[54,1,incl], res3[54,1,incl], res4[54,1,incl]),
+boxplot(cbind(res1[34,1,incl], res2[34,1,incl], res3[34,1,incl], res4[34,1,incl]),
         ylab=lab,  outline= FALSE, names=name,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=name, at=1:4)
 axis(2)
 
 lab <- expression('SD ('*lambda*')')
-boxplot(cbind(res1[54,2,incl], res2[54,2,incl], res3[54,2,incl], res4[54,2,incl]),
+boxplot(cbind(res1[34,2,incl], res2[34,2,incl], res3[34,2,incl], res4[34,2,incl]),
         ylab=lab,  outline=FALSE, names=name,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=name, at=1:4)
 axis(2)
-
-
 par(op)
