@@ -255,7 +255,7 @@ model {
 # ---------------------
 # Number of simulations
 # nsim <- 1500
-nsim <- 500# ~~~ for testing
+nsim <- 50# ~~~ for testing
 
 # Age specific survival probabilities (juv, adult)
 sj <- 0.3
@@ -357,7 +357,7 @@ system.time(
 #exemple de sortie
 print(m1)
 #sauvegarde des matrices de résumés
-save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.Rdata")
+save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.50simJAD.28062022.Rdata")
 
 #vérification de la convergence des chaînes MCMC
 #traceplot(m1)
@@ -365,7 +365,7 @@ save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.R
 #traceplot(m3)
 #traceplot(m4)
 
-load("Data Fig 6.4.Rdata")
+load("Data Fig 6.4.50simJAD.28062022.Rdata")
 
 # Select only the 1000 simulations that have converged
 incl <- which(res1[1,8,]<1.05 & res1[2,8,]<1.05 & res1[4,8,]<1.05 & res1[34,8,]<1.05 &
