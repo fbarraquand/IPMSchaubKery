@@ -272,7 +272,7 @@ model {
 # ---------------------
 
 # Number of simulations
-nsim <- 500
+nsim <- 100
 #nsim <- 3 # ~~~ for testing
 
 # Age specific survival probabilities (juv, adult)
@@ -370,19 +370,22 @@ system.time(
     print(s)
   }  )  # 3 sims took 90 secsm 1500 took 12 hrs
 
-save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.500sim.28062022.Rdata")
+save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.100sim.05072022.Rdata")
 print(m4)
 
 
-load("Data Fig 6.4.50sim.28062022.Rdata")
-
-# Select only the 1000 simulations that have converged
+load("Data Fig 6.4.1500sim.30062022.Rdata")
+m1$summary
+m2$summary
+m3$summary
+m4$summary
+# Select only the 1500 simulations that have converged
 incl <- which(res1[1,8,]<1.05 & res1[2,8,]<1.05 & res1[4,8,]<1.05 & res1[34,8,]<1.05 &
                 res2[1,8,]<1.05 & res2[2,8,]<1.05 & res2[4,8,]<1.05 & res2[34,8,]<1.05 &
                 res3[1,8,]<1.05 & res3[2,8,]<1.05 & res3[4,8,]<1.05 & res3[34,8,]<1.05 &
                 res4[1,8,]<1.05 & res4[2,8,]<1.05 & res4[4,8,]<1.05 & res4[34,8,]<1.05)
-if(length(incl) > 1000)
-  incl <- incl[1:1000]
+if(length(incl) > 1500)
+  incl <- incl[1:1500]
 
 op <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
 name <- c("CR & P & C", "CR & C", "P & C", "C")
@@ -446,3 +449,203 @@ boxplot(cbind(res1[34,2,incl], res2[34,2,incl], res3[34,2,incl], res4[34,2,incl]
 axis(1, labels=name, at=1:4)
 axis(2)
 par(op)
+
+
+
+#graphique isolant CR & P & C
+
+op2 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name2 <- c("CR & P & C")
+
+lab2 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(res1[1,1,incl],
+        ylab=lab2, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab2 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(res1[1,2,incl], 
+        ylab=lab2, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab2 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(res1[2,1,incl],
+        ylab=lab2, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab2 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(res1[2,2,incl],
+        ylab=lab2, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab2 <- expression('Productivity ('*italic('f')*')')
+boxplot(res1[4,1,incl],
+        ylab=lab2, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab2 <- expression('SD ('*italic('f')*')')
+boxplot(res1[4,2,incl], 
+        ylab=lab2, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab2 <- expression('Population growth rate ('*lambda*')')
+boxplot(res1[34,1,incl],
+        ylab=lab2,  outline= FALSE, names=name2,
+        col=c("red"), axes=FALSE)
+axis(1, labels=name2, at=1)
+axis(2)
+
+lab2 <- expression('SD ('*lambda*')')
+boxplot(res1[34,2,incl],
+        ylab=lab2,  outline=FALSE, names=name2,
+        col=c("red"), axes=FALSE)
+axis(1, labels=name2, at=1)
+axis(2)
+
+par(op2)
+
+
+#graphique isolant C & CR
+
+op5 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name5 <- c("CR & C")
+
+lab5 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(res2[1,1,incl],
+        ylab=lab5, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab5 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(res2[1,2,incl],
+        ylab=lab5, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab5 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(res2[2,1,incl],
+        ylab=lab5, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab5 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(res2[2,2,incl],
+        ylab=lab5, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab5 <- expression('Productivity ('*italic('f')*')')
+boxplot(res2[4,1,incl],
+        ylab=lab5, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab5 <- expression('SD ('*italic('f')*')')
+boxplot(res2[4,2,incl],
+        ylab=lab5, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab5 <- expression('Population growth rate ('*lambda*')')
+boxplot(res2[34,1,incl],
+        ylab=lab5,  outline= FALSE, names=name5,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=name5, at=1)
+axis(2)
+
+lab5 <- expression('SD ('*lambda*')')
+boxplot(res2[34,2,incl],
+        ylab=lab5,  outline=FALSE, names=name5,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=name5, at=1)
+axis(2)
+par(op5)
+
+#test combinaison de boxplots ("CR & P & C" sans dissocier,"C & CR" sans dissocier)
+op10 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name10 <- c("CR & P & C","C & CR")
+
+
+lab10 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,1,incl],res2[1,1,incl]),
+        ylab=lab10, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab10 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,2,incl],res2[1,2,incl]),
+        ylab=lab10, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab10 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,1,incl],res2[2,1,incl]),
+        ylab=lab10, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab10 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,2,incl],res2[2,2,incl]),
+        ylab=lab10, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab10 <- expression('Productivity ('*italic('f')*')')
+boxplot(cbind(res1[4,1,incl],res2[4,1,incl]),
+        ylab=lab10, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab10 <- expression('SD ('*italic('f')*')')
+boxplot(cbind(res1[4,2,incl],res2[4,2,incl]),
+        ylab=lab10, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab10 <- expression('Population growth rate ('*lambda*')')
+boxplot(cbind(res1[34,1,incl],res2[34,1,incl]),
+        ylab=lab10,  outline= FALSE, names=name10,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=name10, at=1:2)
+axis(2)
+
+lab10 <- expression('SD ('*lambda*')')
+boxplot(cbind(res1[34,2,incl],res2[34,2,incl]),
+        ylab=lab10,  outline=FALSE, names=name10,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=name10, at=1:2)
+axis(2)
+par(op10)
+
