@@ -787,14 +787,14 @@ axis(1, labels=NA)
 axis(2)
 
 lab9 <- expression('SD ('*italic('s')[italic(j)]*')')
-boxplot(cbind(res1D[1,2,incl],res2D[1,2,inclD]),
+boxplot(cbind(res1D[1,2,inclD],res2D[1,2,inclD]),
         ylab=lab9, outline=FALSE, names=NA,
         col=c("red","dodgerblue"), axes=FALSE)
 axis(1, labels=NA)
 axis(2)
 
 lab9 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
-boxplot(cbind(res1D[2,1,incl],res2D[2,1,inclD]),
+boxplot(cbind(res1D[2,1,inclD],res2D[2,1,inclD]),
         ylab=lab9, outline=FALSE, names=NA,
         col=c("red","dodgerblue"), axes=FALSE)
 abline(h=sa, lty=2)
@@ -802,14 +802,14 @@ axis(1, labels=NA)
 axis(2)
 
 lab9 <- expression('SD ('*italic('s')[italic(a)]*')')
-boxplot(cbind(res1D[2,2,incl],res2D[2,2,inclD]),
+boxplot(cbind(res1D[2,2,inclD],res2D[2,2,inclD]),
         ylab=lab9, outline=FALSE, names=NA,
         col=c("red","dodgerblue"), axes=FALSE)
 axis(1, labels=NA)
 axis(2)
 
 lab9 <- expression('Productivity ('*italic('f')*')')
-boxplot(cbind(res1D[4,1,incl],res2D[4,1,inclD]),
+boxplot(cbind(res1D[4,1,inclD],res2D[4,1,inclD]),
         ylab=lab9, outline=FALSE, names=NA,
         col=c("red","dodgerblue"), axes=FALSE)
 abline(h=fl1, lty=2)
@@ -817,21 +817,21 @@ axis(1, labels=NA)
 axis(2)
 
 lab9 <- expression('SD ('*italic('f')*')')
-boxplot(cbind(res1D[4,2,incl],res2D[4,2,inclD]),
+boxplot(cbind(res1D[4,2,inclD],res2D[4,2,inclD]),
         ylab=lab9, outline=FALSE, names=NA,
         col=c("red","dodgerblue"), axes=FALSE)
 axis(1, labels=NA)
 axis(2)
 
 lab9 <- expression('Population growth rate ('*lambda*')')
-boxplot(cbind(res1D[34,1,incl],res2D[34,1,inclD]),
+boxplot(cbind(res1D[34,1,inclD],res2D[34,1,inclD]),
         ylab=lab9,  outline= FALSE, names=name9,
         col=c("red","dodgerblue"), axes=FALSE)
 axis(1, labels=name9, at=1:2)
 axis(2)
 
 lab9 <- expression('SD ('*lambda*')')
-boxplot(cbind(res1D[34,2,incl],res2D[34,2,inclD]),
+boxplot(cbind(res1D[34,2,inclD],res2D[34,2,inclD]),
         ylab=lab9,  outline=FALSE, names=name9,
         col=c("red","dodgerblue"), axes=FALSE)
 axis(1, labels=name9, at=1:2)
@@ -903,4 +903,70 @@ boxplot(cbind(res1[34,2,incl],res2D[34,2,inclD],res3D[34,2,inclD]),
 axis(1, labels=name11, at=1:3)
 axis(2)
 par(op11)
+
+
+#test combinaison de boxplots ("C" sans dissocier,"C" en dissociant)
+op12 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name12 <- c("C","C")
+
+
+lab12 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res4[1,1,incl],res4D[1,1,inclD]),
+        ylab=lab12, outline=FALSE, names=NA,
+        col=c("orange","orange"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab12 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res4[1,2,incl],res4D[1,2,inclD]),
+        ylab=lab12, outline=FALSE, names=NA,
+        col=c("orange","orange"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab12 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res4[2,1,incl],res4D[2,1,inclD]),
+        ylab=lab12, outline=FALSE, names=NA,
+        col=c("orange","orange"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab12 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res4[2,2,incl],res4D[2,2,inclD]),
+        ylab=lab12, outline=FALSE, names=NA,
+        col=c("orange","orange"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab12 <- expression('Productivity ('*italic('f')*')')
+boxplot(cbind(res4[4,1,incl],res4D[4,1,inclD]),
+        ylab=lab12, outline=FALSE, names=NA,
+        col=c("orange","orange"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab12 <- expression('SD ('*italic('f')*')')
+boxplot(cbind(res4[4,2,incl],res4D[4,2,inclD]),
+        ylab=lab12, outline=FALSE, names=NA,
+        col=c("orange","orange"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab12 <- expression('Population growth rate ('*lambda*')')
+boxplot(cbind(res4[34,1,incl],res4D[34,1,inclD]),
+        ylab=lab12,  outline= FALSE, names=name12,
+        col=c("orange","orange"), axes=FALSE)
+axis(1, labels=name12, at=1:2)
+axis(2)
+
+lab12 <- expression('SD ('*lambda*')')
+boxplot(cbind(res4[34,2,incl],res4D[34,2,inclD]),
+        ylab=lab12,  outline=FALSE, names=name12,
+        col=c("orange","orange"), axes=FALSE)
+axis(1, labels=name12, at=1:2)
+axis(2)
+par(op12)
 
