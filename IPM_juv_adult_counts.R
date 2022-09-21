@@ -254,8 +254,8 @@ model {
 # Simulation parameters
 # ---------------------
 # Number of simulations
-# nsim <- 1500
-nsim <- 50# ~~~ for testing
+ nsim <- 1500
+#nsim <- 3# ~~~ for testing
 
 # Age specific survival probabilities (juv, adult)
 sj <- 0.3
@@ -289,8 +289,8 @@ parameters.ipm <- c("mean.sj", "mean.sa", "mean.p", "mean.f", "N", "sigma.obs",
                     "ann.growth.rate", "Ntot")
 
 # Define matrices to store the result
-res1 <- res2 <- res3 <- res4 <- array(NA, dim = c(45, 11, nsim))
-#res4  <- array(NA, dim = c(64, 11, nsim))
+res1DD <- res2DD <- res3DD <- res4DD <- array(NA, dim = c(45, 11, nsim))
+#res4D  <- array(NA, dim = c(64, 11, nsim))
 
 # Start simulations
 system.time(
@@ -333,31 +333,31 @@ system.time(
     m1 <- try(jags(jags.data.ipm1, inits.ipm, parameters.ipm, "ipm1.txt",
                    n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, n.adapt = na, parallel = TRUE))
     if (!inherits(m1, "try-error"))
-      res1[,,s] <- m1$summary
+      res1D[,,s] <- m1$summary
     
     m2 <- try(jags(jags.data.ipm2, inits.ipm, parameters.ipm, "ipm2.txt",
                    n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, n.adapt = na, parallel = TRUE))
     if (!inherits(m2, "try-error"))
-      res2[,,s] <- m2$summary
+      res2D[,,s] <- m2$summary
     
     ni <- 200000; nt <- 1; nb <- 50000; nc <- 3
     
     m3 <- try(jags(jags.data.ipm3, inits.ipm, parameters.ipm, "ipm3.txt",
                    n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, n.adapt = na, parallel = TRUE))
     if (!inherits(m3,  "try-error"))
-      res3[,,s] <- m3$summary
-    
+      res3D[,,s] <- m3$summary
+  
     m4 <- try(jags(jags.data.ipm4, inits.ipm, parameters.ipm, "ipm4.txt",
                    n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, n.adapt = na, parallel = TRUE))
     if (!inherits(m4, "try-error"))
-      res4[,,s] <- m4$summary
+      res4D[,,s] <- m4$summary
   
     print(s)
   }  )  # 3 sims took 90 secsm 1500 took 12 hrs
 #exemple de sortie
 print(m1)
 #sauvegarde des matrices de résumés
-save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.50simJAD.28062022.Rdata")
+save(res1D, res2D, res3D, res4D, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.1500simJAD.20092022.Rdata")
 
 #vérification de la convergence des chaînes MCMC
 #traceplot(m1)
@@ -365,21 +365,25 @@ save(res1, res2, res3, res4, sj, sa, fl1, fl2, sigma, prec, file="Data Fig 6.4.5
 #traceplot(m3)
 #traceplot(m4)
 
-load("Data Fig 6.4.50simJAD.28062022.Rdata")
-
-# Select only the 1000 simulations that have converged
-incl <- which(res1[1,8,]<1.05 & res1[2,8,]<1.05 & res1[4,8,]<1.05 & res1[34,8,]<1.05 &
-                res2[1,8,]<1.05 & res2[2,8,]<1.05 & res2[4,8,]<1.05 & res2[34,8,]<1.05 &
-                res3[1,8,]<1.05 & res3[2,8,]<1.05 & res3[4,8,]<1.05 & res3[34,8,]<1.05 &
-                res4[1,8,]<1.05 & res4[2,8,]<1.05 & res4[4,8,]<1.05 & res4[34,8,]<1.05)
-if(length(incl) > 1000)
-  incl <- incl[1:1000]
+load("Data Fig 6.4.1500simJAD.20092022.Rdata")
+m1$summary
+m2$summary
+m3$summary
+m4$summary
+# Select only the 1500 simulations that have converged
+#si jamais res1D ne fonctionne pas, faire res1DD
+inclD <- which(res1D[1,8,]<1.05 & res1D[2,8,]<1.05 & res1D[4,8,]<1.05 & res1D[34,8,]<1.05 &
+                res2D[1,8,]<1.05 & res2D[2,8,]<1.05 & res2D[4,8,]<1.05 & res2D[34,8,]<1.05 &
+                res3D[1,8,]<1.05 & res3D[2,8,]<1.05 & res3D[4,8,]<1.05 & res3D[34,8,]<1.05 &
+                res4D[1,8,]<1.05 & res4D[2,8,]<1.05 & res4D[4,8,]<1.05 & res4D[34,8,]<1.05)
+if(length(inclD) > 1500)
+  inclD <- inclD[1:1500]
 
 op <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
 name <- c("CR & P & C", "CR & C", "P & C", "C")
 
 lab <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
-boxplot(cbind(res1[1,1,incl], res2[1,1,incl], res3[1,1,incl], res4[1,1,incl]),
+boxplot(cbind(res1DD[1,1,inclD], res2D[1,1,inclD], res3D[1,1,inclD], res4D[1,1,inclD]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 abline(h=sj, lty=2)
@@ -387,14 +391,14 @@ axis(1, labels=NA)
 axis(2)
 
 lab <- expression('SD ('*italic('s')[italic(j)]*')')
-boxplot(cbind(res1[1,2,incl], res2[1,2,incl], res3[1,2,incl], res4[1,2,incl]),
+boxplot(cbind(res1DD[1,2,inclD], res2D[1,2,inclD], res3D[1,2,inclD], res4D[1,2,inclD]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=NA)
 axis(2)
 
 lab <- expression('Adult survival ('*italic('s')[italic(a)]*')')
-boxplot(cbind(res1[2,1,incl], res2[2,1,incl], res3[2,1,incl], res4[2,1,incl]),
+boxplot(cbind(res1DD[2,1,inclD], res2D[2,1,inclD], res3D[2,1,inclD], res4D[2,1,inclD]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 abline(h=sa, lty=2)
@@ -402,14 +406,14 @@ axis(1, labels=NA)
 axis(2)
 
 lab <- expression('SD ('*italic('s')[italic(a)]*')')
-boxplot(cbind(res1[2,2,incl], res2[2,2,incl], res3[2,2,incl], res4[2,2,incl]),
+boxplot(cbind(res1DD[2,2,inclD], res2D[2,2,inclD], res3D[2,2,inclD], res4D[2,2,inclD]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=NA)
 axis(2)
 
 lab <- expression('Productivity ('*italic('f')*')')
-boxplot(cbind(res1[4,1,incl], res2[4,1,incl], res3[4,1,incl], res4[4,1,incl]),
+boxplot(cbind(res1DD[4,1,inclD], res2D[4,1,inclD], res3D[4,1,inclD], res4D[4,1,inclD]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 abline(h=fl1, lty=2)
@@ -417,23 +421,486 @@ axis(1, labels=NA)
 axis(2)
 
 lab <- expression('SD ('*italic('f')*')')
-boxplot(cbind(res1[4,2,incl], res2[4,2,incl], res3[4,2,incl], res4[4,2,incl]),
+boxplot(cbind(res1DD[4,2,inclD], res2D[4,2,inclD], res3D[4,2,inclD], res4D[4,2,inclD]),
         ylab=lab, outline=FALSE, names=NA,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=NA)
 axis(2)
 
 lab <- expression('Population growth rate ('*lambda*')')
-boxplot(cbind(res1[34,1,incl], res2[34,1,incl], res3[34,1,incl], res4[34,1,incl]),
+boxplot(cbind(res1D[34,1,inclD], res2D[34,1,inclD], res3D[34,1,inclD], res4D[34,1,inclD]),
         ylab=lab,  outline= FALSE, names=name,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=name, at=1:4)
 axis(2)
 
 lab <- expression('SD ('*lambda*')')
-boxplot(cbind(res1[34,2,incl], res2[34,2,incl], res3[34,2,incl], res4[34,2,incl]),
+boxplot(cbind(res1D[34,2,inclD], res2D[34,2,inclD], res3D[34,2,inclD], res4D[34,2,inclD]),
         ylab=lab,  outline=FALSE, names=name,
         col=c("red", "dodgerblue", "darkolivegreen", "orange"), axes=FALSE)
 axis(1, labels=name, at=1:4)
 axis(2)
 par(op)
+
+
+#graphique isolant C & CR
+
+op3 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name3 <- c("CR & C")
+
+lab3 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(res2D[1,1,inclD],
+        ylab=lab3, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab3 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(res2D[1,2,inclD],
+        ylab=lab3, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab3 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(res2D[2,1,inclD],
+        ylab=lab3, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab3 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(res2D[2,2,inclD],
+        ylab=lab3, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab3 <- expression('Productivity ('*italic('f')*')')
+boxplot(res2D[4,1,inclD],
+        ylab=lab3, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab3 <- expression('SD ('*italic('f')*')')
+boxplot(res2D[4,2,inclD],
+        ylab=lab3, outline=FALSE, names=NA,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab3 <- expression('Population growth rate ('*lambda*')')
+boxplot(res2D[34,1,inclD],
+        ylab=lab3,  outline= FALSE, names=name3,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=name3, at=1)
+axis(2)
+
+lab3 <- expression('SD ('*lambda*')')
+boxplot(res2D[34,2,inclD],
+        ylab=lab3,  outline=FALSE, names=name3,
+        col=c("dodgerblue"), axes=FALSE)
+axis(1, labels=name3, at=1)
+axis(2)
+par(op3)
+
+
+#graphique isolant C & P
+
+op4 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name4 <- c("C & P")
+
+lab4 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(res3D[1,1,inclD],
+        ylab=lab4, outline=FALSE, names=NA,
+        col=c("darkolivegreen"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab4 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(res3D[1,2,inclD],
+        ylab=lab4, outline=FALSE, names=NA,
+        col=c("darkolivegreen"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab4 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(res3D[2,1,inclD],
+        ylab=lab4, outline=FALSE, names=NA,
+        col=c("darkolivegreen"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab4 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(res3D[2,2,inclD],
+        ylab=lab4, outline=FALSE, names=NA,
+        col=c("darkolivegreen"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab4 <- expression('Productivity ('*italic('f')*')')
+boxplot(res3D[4,1,inclD],
+        ylab=lab4, outline=FALSE, names=NA,
+        col=c("darkolivegreen"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab4 <- expression('SD ('*italic('f')*')')
+boxplot(res3D[4,2,inclD],
+        ylab=lab4, outline=FALSE, names=NA,
+        col=c("darkolivegreen"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab4 <- expression('Population growth rate ('*lambda*')')
+boxplot(res3D[34,1,inclD],
+        ylab=lab4,  outline= FALSE, names=name4,
+        col=c("darkolivegreen"), axes=FALSE)
+axis(1, labels=name4, at=1)
+axis(2)
+
+lab4 <- expression('SD ('*lambda*')')
+boxplot(res3D[34,2,inclD],
+        ylab=lab4,  outline=FALSE, names=name4,
+        col=c("darkolivegreen"), axes=FALSE)
+axis(1, labels=name4, at=1)
+axis(2)
+par(op4)
+
+#graphique isolant CR & P & C
+
+op6 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name6 <- c("CR & P & C")
+
+lab6 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(res1D[1,1,inclD],
+        ylab=lab6, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab6 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(res1D[1,2,inclD], 
+        ylab=lab6, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab6 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(res1D[2,1,inclD],
+        ylab=lab6, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab6 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(res1D[2,2,inclD],
+        ylab=lab6, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab6 <- expression('Productivity ('*italic('f')*')')
+boxplot(res1D[4,1,inclD],
+        ylab=lab6, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab6 <- expression('SD ('*italic('f')*')')
+boxplot(res1D[4,2,inclD], 
+        ylab=lab6, outline=FALSE, names=NA,
+        col=c("red"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab6 <- expression('Population growth rate ('*lambda*')')
+boxplot(res1D[34,1,inclD],
+        ylab=lab6,  outline= FALSE, names=name6,
+        col=c("red"), axes=FALSE)
+axis(1, labels=name6, at=1)
+axis(2)
+
+lab6 <- expression('SD ('*lambda*')')
+boxplot(res1D[34,2,inclD],
+        ylab=lab6,  outline=FALSE, names=name6,
+        col=c("red"), axes=FALSE)
+axis(1, labels=name6, at=1)
+axis(2)
+
+par(op6)
+
+
+#test combinaison de boxplots ("CR & P & C" sans dissocier,"C & CR" en dissociant)
+op7 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name7 <- c("CR & P & C","C & CR")
+
+
+lab7 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,1,incl],res2D[1,1,inclD]),
+        ylab=lab7, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab7 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,2,incl],res2D[1,2,inclD]),
+        ylab=lab7, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab7 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,1,incl],res2D[2,1,inclD]),
+        ylab=lab7, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab7 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,2,incl],res2D[2,2,inclD]),
+        ylab=lab7, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab7 <- expression('Productivity ('*italic('f')*')')
+boxplot(cbind(res1[4,1,incl],res2D[4,1,inclD]),
+        ylab=lab7, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab7 <- expression('SD ('*italic('f')*')')
+boxplot(cbind(res1[4,2,incl],res2D[4,2,inclD]),
+        ylab=lab7, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab7 <- expression('Population growth rate ('*lambda*')')
+boxplot(cbind(res1[34,1,incl],res2D[34,1,inclD]),
+        ylab=lab7,  outline= FALSE, names=name7,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=name7, at=1:2)
+axis(2)
+
+lab7 <- expression('SD ('*lambda*')')
+boxplot(cbind(res1[34,2,incl],res2D[34,2,inclD]),
+        ylab=lab7,  outline=FALSE, names=name7,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=name7, at=1:2)
+axis(2)
+par(op7)
+
+
+
+#test combinaison de boxplots ("CR & P & C" sans dissocier,"C & P" en dissociant)
+op8 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name8 <- c("CR & P & C","C & P")
+
+
+lab8 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,1,incl],res3D[1,1,inclD]),
+        ylab=lab8, outline=FALSE, names=NA,
+        col=c("red","darkolivegreen"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab8 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,2,incl],res3D[1,2,inclD]),
+        ylab=lab8, outline=FALSE, names=NA,
+        col=c("red","darkolivegreen"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab8 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,1,incl],res3D[2,1,inclD]),
+        ylab=lab8, outline=FALSE, names=NA,
+        col=c("red","darkolivegreen"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab8 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,2,incl],res3D[2,2,inclD]),
+        ylab=lab8, outline=FALSE, names=NA,
+        col=c("red","darkolivegreen"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab8 <- expression('Productivity ('*italic('f')*')')
+boxplot(cbind(res1[4,1,incl],res3D[4,1,inclD]),
+        ylab=lab8, outline=FALSE, names=NA,
+        col=c("red","darkolivegreen"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab8 <- expression('SD ('*italic('f')*')')
+boxplot(cbind(res1[4,2,incl],res3D[4,2,inclD]),
+        ylab=lab8, outline=FALSE, names=NA,
+        col=c("red","darkolivegreen"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab8 <- expression('Population growth rate ('*lambda*')')
+boxplot(cbind(res1[34,1,incl],res3D[34,1,inclD]),
+        ylab=lab8,  outline= FALSE, names=name8,
+        col=c("red","darkolivegreen"), axes=FALSE)
+axis(1, labels=name8, at=1:2)
+axis(2)
+
+lab8 <- expression('SD ('*lambda*')')
+boxplot(cbind(res1[34,2,incl],res3D[34,2,inclD]),
+        ylab=lab8,  outline=FALSE, names=name8,
+        col=c("red","darkolivegreen"), axes=FALSE)
+axis(1, labels=name8, at=1:2)
+axis(2)
+par(op8)
+
+#test combinaison de boxplots ("CR & P & C" en dissociant,"C & CR" en dissociant)
+op9 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name9 <- c("CR & P & C","C & CR")
+
+
+lab9 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1D[1,1,inclD],res2D[1,1,inclD]),
+        ylab=lab9, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab9 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1D[1,2,incl],res2D[1,2,inclD]),
+        ylab=lab9, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab9 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1D[2,1,incl],res2D[2,1,inclD]),
+        ylab=lab9, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab9 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1D[2,2,incl],res2D[2,2,inclD]),
+        ylab=lab9, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab9 <- expression('Productivity ('*italic('f')*')')
+boxplot(cbind(res1D[4,1,incl],res2D[4,1,inclD]),
+        ylab=lab9, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab9 <- expression('SD ('*italic('f')*')')
+boxplot(cbind(res1D[4,2,incl],res2D[4,2,inclD]),
+        ylab=lab9, outline=FALSE, names=NA,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab9 <- expression('Population growth rate ('*lambda*')')
+boxplot(cbind(res1D[34,1,incl],res2D[34,1,inclD]),
+        ylab=lab9,  outline= FALSE, names=name9,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=name9, at=1:2)
+axis(2)
+
+lab9 <- expression('SD ('*lambda*')')
+boxplot(cbind(res1D[34,2,incl],res2D[34,2,inclD]),
+        ylab=lab9,  outline=FALSE, names=name9,
+        col=c("red","dodgerblue"), axes=FALSE)
+axis(1, labels=name9, at=1:2)
+axis(2)
+par(op9)
+
+
+#test combinaison de boxplots ("CR & P & C" sans dissocier,"C & P" en dissociant, "C & CR" en dissociant)
+op11 <- par(las=1, mar=c(2.5, 4.2, 1, 1), mfrow=c(4, 2))
+name11 <- c("CR & P & C", "C & CR", "C & P")
+
+
+lab11 <- expression('Juvenile survival ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,1,incl],res2D[1,1,inclD],res3D[1,1,inclD]),
+        ylab=lab11, outline=FALSE, names=NA,
+        col=c("red","dodgerblue","darkolivegreen"), axes=FALSE)
+abline(h=sj, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab11 <- expression('SD ('*italic('s')[italic(j)]*')')
+boxplot(cbind(res1[1,2,incl],res2D[1,2,inclD],res3D[1,2,inclD]),
+        ylab=lab11, outline=FALSE, names=NA,
+        col=c("red","dodgerblue","darkolivegreen"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab11 <- expression('Adult survival ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,1,incl],res2D[2,1,inclD],res3D[2,1,inclD]),
+        ylab=lab11, outline=FALSE, names=NA,
+        col=c("red","dodgerblue","darkolivegreen"), axes=FALSE)
+abline(h=sa, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab11 <- expression('SD ('*italic('s')[italic(a)]*')')
+boxplot(cbind(res1[2,2,incl],res2D[2,2,inclD],res3D[2,2,inclD]),
+        ylab=lab11, outline=FALSE, names=NA,
+        col=c("red","dodgerblue","darkolivegreen"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab11 <- expression('Productivity ('*italic('f')*')')
+boxplot(cbind(res1[4,1,incl],res2D[4,1,inclD],res3D[4,1,inclD]),
+        ylab=lab11, outline=FALSE, names=NA,
+        col=c("red","dodgerblue","darkolivegreen"), axes=FALSE)
+abline(h=fl1, lty=2)
+axis(1, labels=NA)
+axis(2)
+
+lab11 <- expression('SD ('*italic('f')*')')
+boxplot(cbind(res1[4,2,incl],res2D[4,2,inclD],res3D[4,2,inclD]),
+        ylab=lab11, outline=FALSE, names=NA,
+        col=c("red","dodgerblue","darkolivegreen"), axes=FALSE)
+axis(1, labels=NA)
+axis(2)
+
+lab11 <- expression('Population growth rate ('*lambda*')')
+boxplot(cbind(res1[34,1,incl],res2D[34,1,inclD],res3D[34,1,inclD]),
+        ylab=lab11,  outline= FALSE, names=name11,
+        col=c("red","dodgerblue","darkolivegreen"), axes=FALSE)
+axis(1, labels=name11, at=1:3)
+axis(2)
+
+lab11 <- expression('SD ('*lambda*')')
+boxplot(cbind(res1[34,2,incl],res2D[34,2,inclD],res3D[34,2,inclD]),
+        ylab=lab11,  outline=FALSE, names=name11,
+        col=c("red","dodgerblue","darkolivegreen"), axes=FALSE)
+axis(1, labels=name11, at=1:3)
+axis(2)
+par(op11)
+
